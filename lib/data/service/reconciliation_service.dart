@@ -1,22 +1,19 @@
-import '../repository/audit_event_repository.dart';
 import '../repository/ledger_repository.dart';
+import '../../core/audit_event_factory.dart';
 import 'reconciliation_dto.dart';
 
 class ReconciliationService {
   ReconciliationService({
     required LedgerRepository ledgerRepository,
-    required AuditEventRepository auditEventRepository,
+    required AuditEventFactory auditEventFactory,
     String Function()? now,
-    String Function()? idGenerator,
   })  : _ledgerRepository = ledgerRepository,
-        _auditEventRepository = auditEventRepository,
-        _now = now ?? (() => DateTime.now().toUtc().toIso8601String()),
-        _idGenerator = idGenerator ?? _defaultIdGenerator;
+        _auditEventFactory = auditEventFactory,
+        _now = now ?? (() => DateTime.now().toUtc().toIso8601String());
 
   final LedgerRepository _ledgerRepository;
-  final AuditEventRepository _auditEventRepository;
+  final AuditEventFactory _auditEventFactory;
   final String Function() _now;
-  final String Function() _idGenerator;
 
   Future<ReconciliationResultDto> compareAccountBalance({
     required String accountId,
@@ -47,21 +44,15 @@ class ReconciliationService {
       actualBalance: actualBalance,
       asOfDateInclusive: asOfDateInclusive,
     );
-    final auditEventId = _idGenerator();
-    await _auditEventRepository.recordJsonEvent(
-      auditEventId: auditEventId,
-      eventType: 'reconciliation_completed',
-      targetId: accountId,
-      payload: <String, Object?>{
-        'account_id': accountId,
-        'book_balance': result.bookBalance,
-        'actual_balance': result.actualBalance,
-        'difference': result.difference,
-        'as_of_date_inclusive': asOfDateInclusive,
-        'reconciled_at': result.reconciledAt,
-      },
-      createdAt: result.reconciledAt,
+
+    final auditEventId = _auditEventFactory.generateId();
+    await _auditEventFactory.recordAccountReconciled(
+      accountId: accountId,
+      bookBalance: result.bookBalance,
+      actualBalance: result.actualBalance,
+      diff: result.difference,
     );
+
     return ReconciliationResultDto(
       accountId: result.accountId,
       bookBalance: result.bookBalance,
@@ -70,9 +61,5 @@ class ReconciliationService {
       reconciledAt: result.reconciledAt,
       auditEventId: auditEventId,
     );
-  }
-
-  static String _defaultIdGenerator() {
-    return 'recon_${DateTime.now().microsecondsSinceEpoch}';
   }
 }

@@ -1,13 +1,18 @@
 import 'package:drift/drift.dart';
 
+import '../../core/audit_event_factory.dart';
 import '../local_db/app_database.dart';
 import '../local_db/chobo_records.dart';
 import '../local_db/chobo_standard_accounts.dart';
 
 class AccountRepository {
-  AccountRepository(this._db);
+  AccountRepository(
+    this._db, {
+    AuditEventFactory? auditEventFactory,
+  }) : _auditEventFactory = auditEventFactory;
 
   final AppDatabase _db;
+  final AuditEventFactory? _auditEventFactory;
 
   Future<void> createAccount(ChoboAccountRecord account) async {
     await _db.customInsert(
@@ -26,6 +31,14 @@ class AccountRepository {
       ''',
       variables: _accountVariables(account),
     );
+
+    if (_auditEventFactory != null) {
+      await _auditEventFactory.recordAccountCreated(
+        accountId: account.accountId,
+        name: account.name,
+        kind: account.kind,
+      );
+    }
   }
 
   Future<void> archiveAccount(
@@ -33,6 +46,8 @@ class AccountRepository {
     String? updatedAt,
   }) async {
     final now = updatedAt ?? DateTime.now().toUtc().toIso8601String();
+    final existing = await getAccount(accountId);
+
     final updated = await _db.customUpdate(
       '''
       UPDATE accounts
@@ -47,6 +62,13 @@ class AccountRepository {
     );
     if (updated == 0) {
       throw StateError('Account $accountId was not found.');
+    }
+
+    if (_auditEventFactory != null && existing != null) {
+      await _auditEventFactory.recordAccountArchived(
+        accountId: accountId,
+        name: existing.name,
+      );
     }
   }
 
@@ -101,9 +123,18 @@ class AccountRepository {
     return rows.map(ChoboAccountRecord.fromRow).toList(growable: false);
   }
 
-  Future<int> updateAccount(ChoboAccountRecord account) {
-    return _db.transaction(() async {
-      final existing = await getAccount(account.accountId);
+  Future<int> updateAccount(ChoboAccountRecord account) async {
+    final existing = await getAccount(account.accountId);
+    final changedFields = <String>[];
+
+    if (existing != null) {
+      if (existing.name != account.name) changedFields.add('name');
+      if (existing.currency != account.currency) changedFields.add('currency');
+      if (existing.isArchived != account.isArchived)
+        changedFields.add('is_archived');
+    }
+
+    final result = await _db.transaction(() async {
       if (existing == null) {
         throw StateError('Account ${account.accountId} was not found.');
       }
@@ -140,6 +171,15 @@ class AccountRepository {
         ],
       );
     });
+
+    if (_auditEventFactory != null && changedFields.isNotEmpty) {
+      await _auditEventFactory.recordAccountUpdated(
+        accountId: account.accountId,
+        changedFields: changedFields,
+      );
+    }
+
+    return result;
   }
 
   Future<int> deleteAccount(String accountId) {

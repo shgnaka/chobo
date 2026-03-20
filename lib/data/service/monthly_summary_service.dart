@@ -1,3 +1,4 @@
+import '../../core/aggregation_cache_policy.dart';
 import '../repository/ledger_repository.dart';
 import 'monthly_summary_dto.dart';
 
@@ -5,8 +6,15 @@ class MonthlySummaryService {
   MonthlySummaryService(this._ledgerRepository);
 
   final LedgerRepository _ledgerRepository;
+  final AggregationCache _cache = AggregationCache();
+  final AggregationCachePolicy _policy = AggregationCachePolicy();
 
   Future<MonthlySummaryDto> getMonthlySummary(String month) async {
+    final cached = _cache.get(month);
+    if (cached != null && _policy.isCacheValid(cached.cachedAt)) {
+      return cached.summary as MonthlySummaryDto;
+    }
+
     final summary = await _ledgerRepository.calculateMonthlySummary(month);
     final expenseItems = _mapToCategoryItems(summary.expenseTotals);
     final incomeItems = _mapToCategoryItems(summary.incomeTotals);
@@ -88,7 +96,7 @@ class MonthlySummaryService {
     final cards = sections.expand((section) => section.cards).toList(
           growable: false,
         );
-    return MonthlySummaryDto(
+    final dto = MonthlySummaryDto(
       month: summary.month,
       periodLabel: _formatPeriodLabel(summary.month),
       assetsStart: summary.assetsStart,
@@ -107,6 +115,21 @@ class MonthlySummaryService {
       sections: sections,
       cards: cards,
     );
+
+    _cache.set(
+        month, CachedMonthlySummary(summary: dto, cachedAt: DateTime.now()));
+
+    return dto;
+  }
+
+  void invalidateCache({String? month, String? affectedDate}) {
+    if (month != null) {
+      _cache.invalidate(month);
+    } else if (affectedDate != null) {
+      _cache.invalidateMonthsAffectedByDate(affectedDate);
+    } else {
+      _cache.invalidateAll();
+    }
   }
 
   Future<Map<String, int>> getAccountBalances({
