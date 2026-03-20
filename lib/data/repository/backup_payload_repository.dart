@@ -12,7 +12,7 @@ class BackupPayloadRepository {
     return BackupPayloadEnvelope(
       accounts: await _exportRows(
         '''
-        SELECT account_id, kind, name, parent_account_id, is_default,
+        SELECT account_id, kind, name, currency, parent_account_id, is_default,
                is_archived, created_at, updated_at
         FROM accounts
         ORDER BY account_id
@@ -21,6 +21,7 @@ class BackupPayloadRepository {
           'account_id',
           'kind',
           'name',
+          'currency',
           'parent_account_id',
           'is_default',
           'is_archived',
@@ -125,12 +126,13 @@ class BackupPayloadRepository {
             account_id,
             kind,
             name,
+            currency,
             parent_account_id,
             is_default,
             is_archived,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           ''',
           variables: _accountVariables(account),
         );
@@ -245,9 +247,10 @@ class BackupPayloadRepository {
       Variable(account['account_id']),
       Variable(account['kind']),
       Variable(account['name']),
+      Variable(account['currency'] ?? 'JPY'),
       Variable(account['parent_account_id']),
-      Variable(account['is_default']),
-      Variable(account['is_archived']),
+      Variable(account['is_default'] == true ? 1 : 0),
+      Variable(account['is_archived'] == true ? 1 : 0),
       Variable(account['created_at'] ?? _now()),
       Variable(account['updated_at'] ?? _now()),
     ];

@@ -58,9 +58,9 @@ class OsSecureStorageV1KeyWrapCodec implements KeyWrapCodec {
         ..add(wrapTag);
       return bytes.toBytes();
     } on InvalidCipherTextException catch (error) {
-      throw BackupCryptoException(error.message);
+      throw BackupCryptoException(error.message ?? 'Unknown error');
     } on ArgumentError catch (error) {
-      throw BackupCryptoException(error.message);
+      throw BackupCryptoException(error.message ?? 'Unknown error');
     }
   }
 
