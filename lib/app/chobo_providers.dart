@@ -21,18 +21,30 @@ import '../data/repository/ledger_repository.dart';
 import '../data/repository/settings_repository.dart';
 import '../data/repository/transaction_repository.dart';
 import '../data/service/reconciliation_service.dart';
+import '../data/service/monthly_summary_service.dart';
 import '../core/auth_service.dart';
+import '../core/audit_event_factory.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   return ref.watch(databaseManagerProvider);
 });
 
 final accountRepositoryProvider = Provider<AccountRepository>((ref) {
-  return AccountRepository(ref.watch(appDatabaseProvider));
+  return AccountRepository(
+    ref.watch(appDatabaseProvider),
+    auditEventFactory: ref.watch(auditEventFactoryProvider),
+  );
 });
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  return TransactionRepository(ref.watch(appDatabaseProvider));
+  final monthlySummaryService = ref.watch(monthlySummaryServiceProvider);
+  return TransactionRepository(
+    ref.watch(appDatabaseProvider),
+    auditEventFactory: ref.watch(auditEventFactoryProvider),
+    onCacheInvalidation: (date) {
+      monthlySummaryService.invalidateCache(affectedDate: date);
+    },
+  );
 });
 
 final backupPayloadRepositoryProvider =
@@ -63,7 +75,7 @@ final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) {
 final reconciliationServiceProvider = Provider<ReconciliationService>((ref) {
   return ReconciliationService(
     ledgerRepository: ref.watch(ledgerRepositoryProvider),
-    auditEventRepository: ref.watch(auditEventRepositoryProvider),
+    auditEventFactory: ref.watch(auditEventFactoryProvider),
   );
 });
 
@@ -95,6 +107,7 @@ final backupServiceProvider = Provider<BackupService>((ref) {
     ciphertextCodec: const AesGcmV1CiphertextCodec(),
     payloadCodec: const BackupPayloadJsonCodec(),
     databaseManager: databaseManager,
+    auditEventFactory: ref.watch(auditEventFactoryProvider),
   );
 });
 
@@ -140,4 +153,12 @@ final transactionEntriesProvider =
 final autoBackupManagerProvider = Provider<AutoBackupManager>((ref) {
   final backupService = ref.watch(backupServiceProvider);
   return AutoBackupManager(backupService: backupService);
+});
+
+final monthlySummaryServiceProvider = Provider<MonthlySummaryService>((ref) {
+  return MonthlySummaryService(ref.watch(ledgerRepositoryProvider));
+});
+
+final auditEventFactoryProvider = Provider<AuditEventFactory>((ref) {
+  return AuditEventFactory(ref.watch(auditEventRepositoryProvider));
 });

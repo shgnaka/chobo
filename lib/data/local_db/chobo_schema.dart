@@ -1,7 +1,7 @@
 class ChoboSchema {
   ChoboSchema._();
 
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   static const String databaseFileName = 'chobo.sqlite';
 

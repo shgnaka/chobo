@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../data/local_db/database_manager.dart';
 import '../data/repository/backup_payload_repository.dart';
+import '../core/audit_event_factory.dart';
 import 'backup_codec_exceptions.dart';
 import 'backup_file_codec.dart';
 import 'backup_file_envelope.dart';
@@ -25,6 +26,7 @@ class BackupService {
     DateTime Function()? now,
     String Function()? deviceIdProvider,
     this.databaseManager,
+    AuditEventFactory? auditEventFactory,
   })  : _payloadRepository = payloadRepository,
         _loadMasterKey = loadMasterKey,
         _requireAdditionalAuth = requireAdditionalAuth,
@@ -36,7 +38,8 @@ class BackupService {
         _payloadValidator =
             payloadValidator ?? const BackupPayloadSchemaValidator(),
         _now = now ?? (() => DateTime.now().toUtc()),
-        _deviceIdProvider = deviceIdProvider ?? (() => null);
+        _deviceIdProvider = deviceIdProvider ?? (() => null),
+        _auditEventFactory = auditEventFactory;
 
   final BackupPayloadRepository _payloadRepository;
   final Future<Uint8List> Function() _loadMasterKey;
@@ -50,6 +53,7 @@ class BackupService {
   final DateTime Function() _now;
   final String? Function() _deviceIdProvider;
   final DatabaseManager? databaseManager;
+  final AuditEventFactory? _auditEventFactory;
 
   Future<Uint8List> createBackup({
     required String appVersion,
@@ -108,6 +112,12 @@ class BackupService {
       await _decryptAndValidate(backupBytes);
     }
 
+    if (_auditEventFactory != null) {
+      await _auditEventFactory.recordBackupCreated(
+        size: backupBytes.length,
+      );
+    }
+
     return backupBytes;
   }
 
@@ -115,6 +125,12 @@ class BackupService {
     await _requireAdditionalAuth();
     final payload = await _decryptAndValidate(backupBytes);
     await _payloadRepository.importPayload(payload);
+
+    if (_auditEventFactory != null) {
+      await _auditEventFactory.recordBackupRestored(
+        size: backupBytes.length,
+      );
+    }
   }
 
   Future<void> restoreBackupWithTemporaryDb(Uint8List backupBytes) async {
@@ -124,6 +140,12 @@ class BackupService {
       // Fallback to direct import
       final payload = await _decryptAndValidate(backupBytes);
       await _payloadRepository.importPayload(payload);
+
+      if (_auditEventFactory != null) {
+        await _auditEventFactory.recordBackupRestored(
+          size: backupBytes.length,
+        );
+      }
       return;
     }
 
@@ -132,6 +154,12 @@ class BackupService {
     await temporaryDb.importPayload(payload);
     await temporaryDb.replacePrimary();
     await databaseManager!.replaceDatabase();
+
+    if (_auditEventFactory != null) {
+      await _auditEventFactory.recordBackupRestored(
+        size: backupBytes.length,
+      );
+    }
   }
 
   Future<BackupPayloadEnvelope> verifyBackup(Uint8List backupBytes) async {

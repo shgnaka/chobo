@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../features/home/home_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/transactions/transaction_detail_screen.dart';
 import '../features/transactions/transaction_edit_screen.dart';
 
@@ -9,6 +10,10 @@ final GoRouter choboRouter = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
     ),
     GoRoute(
       path: '/transactions/:transactionId',

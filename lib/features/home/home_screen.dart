@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/chobo_providers.dart';
 import 'transaction_list_tile.dart';
@@ -12,7 +13,16 @@ class HomeScreen extends ConsumerWidget {
     final transactionsAsync = ref.watch(transactionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('CHOBO')),
+      appBar: AppBar(
+        title: const Text('CHOBO'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
+            tooltip: 'Settings',
+          ),
+        ],
+      ),
       body: transactionsAsync.when(
         data: (transactions) {
           if (transactions.isEmpty) {

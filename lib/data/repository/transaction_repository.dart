@@ -1,18 +1,32 @@
 import 'package:drift/drift.dart';
 
+import '../../core/audit_event_factory.dart';
 import '../local_db/app_database.dart';
 import '../local_db/chobo_records.dart';
 
+typedef CacheInvalidationCallback = void Function(String affectedDate);
+
 class TransactionRepository {
-  TransactionRepository(this._db);
+  TransactionRepository(
+    this._db, {
+    AuditEventFactory? auditEventFactory,
+    CacheInvalidationCallback? onCacheInvalidation,
+  })  : _auditEventFactory = auditEventFactory,
+        _onCacheInvalidation = onCacheInvalidation;
 
   final AppDatabase _db;
+  final AuditEventFactory? _auditEventFactory;
+  final CacheInvalidationCallback? _onCacheInvalidation;
+
+  void _invalidateCache(String date) {
+    _onCacheInvalidation?.call(date);
+  }
 
   Future<void> createTransaction(
     ChoboTransactionRecord transactionRecord,
     List<ChoboEntryRecord> entries,
-  ) {
-    return _db.transaction(() async {
+  ) async {
+    await _db.transaction(() async {
       await _validateTransactionForSave(transactionRecord, entries);
       await _insertTransaction(transactionRecord);
       await _replaceTransactionEntries(
@@ -20,6 +34,18 @@ class TransactionRepository {
         entries,
       );
     });
+
+    _invalidateCache(transactionRecord.date);
+
+    if (_auditEventFactory != null) {
+      final totalAmount = entries.isNotEmpty ? entries.first.amount : 0;
+      await _auditEventFactory.recordTransactionCreated(
+        transactionId: transactionRecord.transactionId,
+        date: transactionRecord.date,
+        type: transactionRecord.type,
+        totalAmount: totalAmount,
+      );
+    }
   }
 
   Future<void> createCorrectionTransaction(
@@ -92,15 +118,28 @@ class TransactionRepository {
   Future<int> updateTransaction(
     ChoboTransactionRecord transactionRecord,
     List<ChoboEntryRecord> entries,
-  ) {
-    return _db.transaction(() async {
+  ) async {
+    final existing = await getTransaction(transactionRecord.transactionId);
+    final changedFields = <String>[];
+
+    if (existing != null) {
+      if (existing.date != transactionRecord.date) changedFields.add('date');
+      if (existing.type != transactionRecord.type) changedFields.add('type');
+      if (existing.status != transactionRecord.status)
+        changedFields.add('status');
+      if (existing.description != transactionRecord.description)
+        changedFields.add('description');
+      if (existing.counterparty != transactionRecord.counterparty)
+        changedFields.add('counterparty');
+    }
+
+    final result = await _db.transaction(() async {
       final decision = await canUpdateTransaction(
         transactionRecord.transactionId,
       );
       if (!decision.canApply) {
         throw StateError(decision.reason);
       }
-      final existing = await getTransaction(transactionRecord.transactionId);
       if (existing == null) {
         throw StateError(
           'Transaction ${transactionRecord.transactionId} was not found.',
@@ -113,7 +152,7 @@ class TransactionRepository {
       }
       if (transactionRecord.status == 'void') {
         throw ArgumentError(
-          'Use voidTransaction() to mark a transaction as void.',
+          'Use voidTransaction() to mark a transaction as Void.',
         );
       }
       if (await _isClosedDate(existing.date) ||
@@ -161,6 +200,20 @@ class TransactionRepository {
       );
       return updated;
     });
+
+    _invalidateCache(transactionRecord.date);
+    if (existing != null) {
+      _invalidateCache(existing.date);
+    }
+
+    if (_auditEventFactory != null && changedFields.isNotEmpty) {
+      await _auditEventFactory.recordTransactionUpdated(
+        transactionId: transactionRecord.transactionId,
+        changedFields: changedFields,
+      );
+    }
+
+    return result;
   }
 
   Future<TransactionSaveDecision> canUpdateTransaction(
@@ -231,7 +284,17 @@ class TransactionRepository {
     if (!decision.canApply) {
       return 0;
     }
-    return _db.customUpdate(
+
+    final existing = await getTransaction(transactionId);
+
+    final entryRows = await _db.customSelect(
+      'SELECT amount FROM entries WHERE transaction_id = ? LIMIT 1',
+      variables: <Variable>[Variable(transactionId)],
+    ).get();
+    final totalAmount =
+        entryRows.isNotEmpty ? entryRows.first.read<int>('amount') : 0;
+
+    final result = await _db.customUpdate(
       '''
       UPDATE transactions
       SET status = 'void',
@@ -243,6 +306,21 @@ class TransactionRepository {
         Variable(transactionId),
       ],
     );
+
+    if (existing != null) {
+      _invalidateCache(existing.date);
+    }
+
+    if (_auditEventFactory != null && existing != null) {
+      await _auditEventFactory.recordTransactionVoided(
+        transactionId: transactionId,
+        originalDate: existing.date,
+        originalType: existing.type,
+        totalAmount: totalAmount,
+      );
+    }
+
+    return result;
   }
 
   Future<void> _replaceTransactionEntries(
