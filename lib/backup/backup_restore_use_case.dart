@@ -16,9 +16,9 @@ abstract class BackupPayloadValidator {
 }
 
 abstract class TemporaryBackupDatabase {
-  void importPayload(BackupPayloadEnvelope payload);
+  Future<void> importPayload(BackupPayloadEnvelope payload);
 
-  void replacePrimary();
+  Future<void> replacePrimary();
 }
 
 abstract class RestoreAuthorization {
@@ -48,7 +48,7 @@ class BackupRestoreUseCase {
   final TemporaryBackupDatabase temporaryDatabase;
   final RestoreAuthorization authorization;
 
-  void restore(Uint8List backupBytes) {
+  Future<void> restore(Uint8List backupBytes) async {
     authorization.requireAdditionalAuth();
 
     final envelope = fileCodec.decode(backupBytes);
@@ -69,8 +69,8 @@ class BackupRestoreUseCase {
 
     final payload = payloadCodec.decode(plaintextBytes);
     payloadValidator.validate(payload);
-    temporaryDatabase.importPayload(payload);
-    temporaryDatabase.replacePrimary();
+    await temporaryDatabase.importPayload(payload);
+    await temporaryDatabase.replacePrimary();
   }
 
   void _validateSchemes(BackupFileEnvelope envelope) {

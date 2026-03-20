@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import '../data/local_db/database_manager.dart';
 import '../data/repository/backup_payload_repository.dart';
 import 'backup_codec_exceptions.dart';
 import 'backup_file_codec.dart';
@@ -23,6 +24,7 @@ class BackupService {
     BackupPayloadValidator? payloadValidator,
     DateTime Function()? now,
     String Function()? deviceIdProvider,
+    this.databaseManager,
   })  : _payloadRepository = payloadRepository,
         _loadMasterKey = loadMasterKey,
         _requireAdditionalAuth = requireAdditionalAuth,
@@ -47,9 +49,11 @@ class BackupService {
   final BackupPayloadValidator _payloadValidator;
   final DateTime Function() _now;
   final String? Function() _deviceIdProvider;
+  final DatabaseManager? databaseManager;
 
   Future<Uint8List> createBackup({
     required String appVersion,
+    bool verify = false,
   }) async {
     await _requireAdditionalAuth();
 
@@ -57,6 +61,7 @@ class BackupService {
     _payloadValidator.validate(payload);
 
     final header = BackupHeader(
+      backupVersion: 1,
       appVersion: appVersion,
       schemaVersion: 1,
       createdAt: _now(),
@@ -87,7 +92,7 @@ class BackupService {
       masterKey: masterKey,
     );
 
-    return _fileCodec.encode(
+    final backupBytes = _fileCodec.encode(
       BackupFileEnvelope(
         formatVersion: BinaryBackupFileCodec.formatVersion,
         header: header,
@@ -98,11 +103,44 @@ class BackupService {
         optionalFooter: '',
       ),
     );
+
+    if (verify) {
+      await _decryptAndValidate(backupBytes);
+    }
+
+    return backupBytes;
   }
 
   Future<void> restoreBackup(Uint8List backupBytes) async {
     await _requireAdditionalAuth();
+    final payload = await _decryptAndValidate(backupBytes);
+    await _payloadRepository.importPayload(payload);
+  }
 
+  Future<void> restoreBackupWithTemporaryDb(Uint8List backupBytes) async {
+    await _requireAdditionalAuth();
+
+    if (databaseManager == null) {
+      // Fallback to direct import
+      final payload = await _decryptAndValidate(backupBytes);
+      await _payloadRepository.importPayload(payload);
+      return;
+    }
+
+    final temporaryDb = await databaseManager!.createTemporaryBackupDatabase();
+    final payload = await _decryptAndValidate(backupBytes);
+    await temporaryDb.importPayload(payload);
+    await temporaryDb.replacePrimary();
+    await databaseManager!.replaceDatabase();
+  }
+
+  Future<BackupPayloadEnvelope> verifyBackup(Uint8List backupBytes) async {
+    await _requireAdditionalAuth();
+    return _decryptAndValidate(backupBytes);
+  }
+
+  Future<BackupPayloadEnvelope> _decryptAndValidate(
+      Uint8List backupBytes) async {
     final envelope = _fileCodec.decode(backupBytes);
     _validateSchemes(envelope);
 
@@ -121,7 +159,7 @@ class BackupService {
 
     final payload = _payloadCodec.decode(plaintextBytes);
     _payloadValidator.validate(payload);
-    await _payloadRepository.importPayload(payload);
+    return payload;
   }
 
   void _validateSchemes(BackupFileEnvelope envelope) {

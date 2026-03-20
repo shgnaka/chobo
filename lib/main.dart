@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app/chobo_app.dart';
+import 'app/app_initializer.dart';
 
 void main() {
-  runApp(const ProviderScope(child: ChoboApp()));
+  runApp(const ProviderScope(child: AppInitializer()));
 }

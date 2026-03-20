@@ -7,6 +7,7 @@ class BackupHeader {
     required this.keyWrapScheme,
     required this.payloadFormat,
     required this.deviceId,
+    this.backupVersion = 1,
   });
 
   final String appVersion;
@@ -16,9 +17,11 @@ class BackupHeader {
   final String keyWrapScheme;
   final String payloadFormat;
   final String? deviceId;
+  final int backupVersion;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
+      'backup_version': backupVersion,
       'app_version': appVersion,
       'schema_version': schemaVersion,
       'created_at': createdAt.toUtc().toIso8601String(),
@@ -31,6 +34,7 @@ class BackupHeader {
 
   static BackupHeader fromJson(Map<String, Object?> json) {
     return BackupHeader(
+      backupVersion: json['backup_version'] as int? ?? 1,
       appVersion: json['app_version'] as String,
       schemaVersion: json['schema_version'] as int,
       createdAt: DateTime.parse(json['created_at'] as String).toUtc(),
