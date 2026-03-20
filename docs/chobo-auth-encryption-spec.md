@@ -2,7 +2,7 @@
 title: "CHOBO 認証・暗号化仕様"
 date: "2026-03-20"
 updated: "2026-03-20"
-status: "draft"
+status: "final"
 source: "docs/chobo-spec-memo.md"
 ---
 

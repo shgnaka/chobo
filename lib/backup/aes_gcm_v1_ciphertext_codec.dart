@@ -48,9 +48,9 @@ class AesGcmV1CiphertextCodec implements CiphertextCodec {
       final authTag = Uint8List.sublistView(output, ciphertextLength, length);
       return CiphertextBox(ciphertext: ciphertext, authTag: authTag);
     } on InvalidCipherTextException catch (error) {
-      throw BackupCryptoException(error.message);
+      throw BackupCryptoException(error.message ?? 'Unknown error');
     } on ArgumentError catch (error) {
-      throw BackupCryptoException(error.message);
+      throw BackupCryptoException(error.message ?? 'Unknown error');
     }
   }
 

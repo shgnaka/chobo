@@ -19,6 +19,7 @@ import '../data/repository/ledger_repository.dart';
 import '../data/repository/settings_repository.dart';
 import '../data/repository/transaction_repository.dart';
 import '../data/service/reconciliation_service.dart';
+import '../core/auth_service.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -76,13 +77,17 @@ final backupAuthorizationProvider =
   return LocalAuthBackupAuthorization();
 });
 
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});
+
 final backupServiceProvider = Provider<BackupService>((ref) {
   final masterKeyStore = ref.watch(backupMasterKeyStoreProvider);
-  final authorization = ref.watch(backupAuthorizationProvider);
+  final authService = ref.watch(authServiceProvider);
   return BackupService(
     payloadRepository: ref.watch(backupPayloadRepositoryProvider),
     loadMasterKey: masterKeyStore.load,
-    requireAdditionalAuth: authorization.requireAdditionalAuth,
+    requireAdditionalAuth: authService.requireAuthentication,
     fileCodec: BinaryBackupFileCodec(),
     headerCodec: const BackupHeaderJsonCodec(),
     keyWrapCodec: const OsSecureStorageV1KeyWrapCodec(),
