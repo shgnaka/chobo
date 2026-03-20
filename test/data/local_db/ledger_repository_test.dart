@@ -29,8 +29,7 @@ void main() {
       expect(balances['income:salary'], 300000);
     });
 
-    test('recalculates balances up to the requested as-of date only',
-        () async {
+    test('recalculates balances up to the requested as-of date only', () async {
       final db = _openDb();
       addTearDown(db.close);
       final accounts = AccountRepository(db);

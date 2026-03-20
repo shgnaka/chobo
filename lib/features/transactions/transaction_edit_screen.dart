@@ -1,5 +1,4 @@
 import 'package:chobo/data/local_db/chobo_records.dart';
-import 'package:chobo/data/repository/transaction_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,8 +29,7 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
     TextEditingController(),
     TextEditingController(),
   ];
-  final List<TextEditingController> _memoControllers =
-      <TextEditingController>[
+  final List<TextEditingController> _memoControllers = <TextEditingController>[
     TextEditingController(),
     TextEditingController(),
   ];
@@ -61,7 +59,8 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
   Widget build(BuildContext context) {
     final transactionAsync =
         ref.watch(transactionProvider(widget.transactionId));
-    final entriesAsync = ref.watch(transactionEntriesProvider(widget.transactionId));
+    final entriesAsync =
+        ref.watch(transactionEntriesProvider(widget.transactionId));
     final accountsAsync = ref.watch(accountsProvider);
     final saveDecisionAsync =
         ref.watch(transactionSaveDecisionProvider(widget.transactionId));

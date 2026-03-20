@@ -103,17 +103,15 @@ void main() {
     expect(updated.description, 'Dinner');
     expect(updated.type, 'expense');
 
-    final updatedEntries = await db
-        .customSelect(
-          '''
+    final updatedEntries = await db.customSelect(
+      '''
           SELECT account_id, direction, amount
           FROM entries
           WHERE transaction_id = ?
           ORDER BY entry_id
           ''',
-          variables: <Variable>[Variable('txn_001')],
-        )
-        .get();
+      variables: <Variable>[Variable('txn_001')],
+    ).get();
     expect(updatedEntries[0].read<int>('amount'), 1300);
     expect(updatedEntries[1].read<int>('amount'), 1300);
   });
