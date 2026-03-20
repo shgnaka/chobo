@@ -172,6 +172,7 @@ JSON のルールは次の通り。
 
 推奨キーは次の通り。
 
+- `backup_version`
 - `app_version`
 - `schema_version`
 - `created_at`
@@ -268,7 +269,7 @@ wrapped key の内側は、次の順でバイト列を並べる。
 #### 4.4.13 header sample
 
 ```json
-{"app_version":"1.0.0","schema_version":1,"created_at":"2026-03-20T00:00:00Z","encryption_scheme":"aes-gcm-v1","key_wrap_scheme":"os-secure-storage-v1","payload_format":"json-v1","device_id":"device-opaque-001"}
+{"backup_version":1,"app_version":"1.0.0","schema_version":1,"created_at":"2026-03-20T00:00:00Z","encryption_scheme":"aes-gcm-v1","key_wrap_scheme":"os-secure-storage-v1","payload_format":"json-v1","device_id":"device-opaque-001"}
 ```
 
 #### 4.4.14 backup payload sample
