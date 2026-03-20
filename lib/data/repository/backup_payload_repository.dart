@@ -236,7 +236,7 @@ class BackupPayloadRepository {
       for (final column in columns)
         column: boolColumns.contains(column)
             ? row.read<int>(column) == 1
-            : row.read<Object?>(column),
+            : row.data[column],
     };
   }
 
