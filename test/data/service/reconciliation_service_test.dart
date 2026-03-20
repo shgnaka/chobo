@@ -1,4 +1,5 @@
 import 'package:chobo/chobo.dart';
+import 'package:chobo/core/audit_event_factory.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,11 +17,11 @@ void main() {
     final accounts = AccountRepository(db);
     final transactions = TransactionRepository(db);
     final audits = AuditEventRepository(db);
+    final auditFactory = AuditEventFactory(audits);
     final service = ReconciliationService(
       ledgerRepository: LedgerRepository(db),
-      auditEventRepository: audits,
+      auditEventFactory: auditFactory,
       now: () => '2026-03-20T12:00:00Z',
-      idGenerator: () => 'recon_001',
     );
 
     await accounts.createAccount(
@@ -59,11 +60,10 @@ void main() {
     expect(result.actualBalance, -1200);
     expect(result.difference, 0);
     expect(result.isBalanced, isTrue);
-    expect(result.auditEventId, 'recon_001');
 
     final events = await audits.listEvents(targetId: 'asset:bank:main');
     expect(events, hasLength(1));
-    expect(events.single.eventType, 'reconciliation_completed');
+    expect(events.single.eventType, 'account_reconciled');
   });
 }
 
