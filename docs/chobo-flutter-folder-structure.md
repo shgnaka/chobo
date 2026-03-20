@@ -46,6 +46,10 @@ lib/
     repository/
       account_repository.dart
       transaction_repository.dart
+      entry_repository.dart
+      ledger_repository.dart
+    service/
+      monthly_summary_service.dart
       settings_repository.dart
       audit_repository.dart
   platform/
@@ -76,7 +80,12 @@ lib/
 - `lib/app/chobo_app.dart`
 - `lib/app/router.dart`
 - `lib/features/home/home_screen.dart`
+- `lib/data/local_db/app_database.dart`
 - `lib/data/local_db/chobo_drift_connection.dart`
+- `lib/data/repository/account_repository.dart`
+- `lib/data/repository/transaction_repository.dart`
+- `lib/data/repository/entry_repository.dart`
+- `lib/data/repository/ledger_repository.dart`
 
 ## 4. 各層の役割
 
