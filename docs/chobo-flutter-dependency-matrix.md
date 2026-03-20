@@ -182,4 +182,4 @@ source: "docs/chobo-dependency-policy.md"
 - バックアップ入出力はどのプラグイン境界に閉じ込めるか
 - iOS 追随を見据えて、最小限に留めるべき依存はどれか
 
-CHOBO のフォルダ構成案は [`docs/chobo-flutter-folder-structure.md`](/home/shgnaka/chobo/docs/chobo-flutter-folder-structure.md) にまとめる。
+CHOBO のフォルダ構成案は [`chobo-flutter-folder-structure.md`](chobo-flutter-folder-structure.md) にまとめる。

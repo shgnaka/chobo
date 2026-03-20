@@ -112,7 +112,7 @@ CHOBO では次の順で判断する。
 4. 依存は増やしすぎない
 5. 追加前に必ずこの文書で確認する
 
-Flutter での候補仕分けは [`docs/chobo-flutter-dependency-matrix.md`](/home/shgnaka/chobo/docs/chobo-flutter-dependency-matrix.md) にまとめる。
+Flutter での候補仕分けは [`chobo-flutter-dependency-matrix.md`](chobo-flutter-dependency-matrix.md) にまとめる。
 
 ## 8. 追加時の合格ライン
 

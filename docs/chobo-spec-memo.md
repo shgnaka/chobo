@@ -394,7 +394,7 @@ UI入力は以下のように内部取引へ変換する。
 - Tauri は採用候補から外す
 - 実装候補は Flutter 系の単一コードベースを中心に検討する
 - UI と永続化境界を分離して、OS 差分は最小限のプラットフォーム実装で吸収する
-- 依存採用の判断基準は [`docs/chobo-dependency-policy.md`](/home/shgnaka/chobo/docs/chobo-dependency-policy.md) に分離する
+- 依存採用の判断基準は [`chobo-dependency-policy.md`](chobo-dependency-policy.md) に分離する
 
 - ローカルファーストなデスクトップアプリ
 - ファイルベースまたは組み込みDBで持ちやすく、分析UIやエクスポートも作りやすい
