@@ -50,7 +50,9 @@ source: "docs/chobo-spec-memo.md"
 - `account_id` は一意
 - `kind` は `asset | liability | income | expense | equity`
 - `parent_account_id` は任意
+- `is_default = true` の勘定は標準勘定として扱う
 - `kind` は、既存取引がある場合は変更禁止
+- 標準勘定の `account_id` と `kind` は固定する
 
 ### 3.2 `transactions`
 
@@ -74,6 +76,9 @@ source: "docs/chobo-spec-memo.md"
 - `transaction_id` は一意
 - `type` は `income | expense | transfer | credit_expense | liability_payment`
 - `status` は `posted | pending | void`
+- `posted` のみ残高と集計の計算対象とする
+- `pending` は未計上の取引として扱う
+- `void` は取消として扱い、残高計算から除外する
 - 締め済み期間に属する取引は直接更新しない
 
 ### 3.3 `entries`
@@ -145,6 +150,7 @@ source: "docs/chobo-spec-memo.md"
 #### 役割
 
 - 取引の作成、更新、取消、訂正を追跡する
+- 残高照合の完了を追跡する
 - 勘定更新やバックアップなどの重要操作を記録する
 
 ## 4. 保存ルール
@@ -190,4 +196,3 @@ DB 直接参照を各画面に散らさず、Repository を通す。
 - スキーマ変更時は `schema_version` を持つ前提で移行できるようにする
 - バックアップ復元時は、構造検証と整合性検証を分ける
 - 締め済みデータを壊す変更は、必ず移行ルールを明示する
-
