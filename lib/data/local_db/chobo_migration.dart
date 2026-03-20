@@ -32,6 +32,9 @@ class ChoboMigration {
           case 2:
             await _applyVersion2(migrator);
             break;
+          case 3:
+            await _applyVersion3(migrator);
+            break;
           default:
             throw UnsupportedError(
               'Schema migration to v$version is not implemented yet.',
@@ -69,6 +72,21 @@ class ChoboMigration {
     );
     await migrator.database.customStatement(
       'PRAGMA user_version = 2;',
+    );
+  }
+
+  static Future<void> _applyVersion3(Migrator migrator) async {
+    await migrator.database.customInsert(
+      '''
+      INSERT OR IGNORE INTO settings (setting_key, setting_value)
+      VALUES ('app_lock_enabled', 'false'),
+             ('lock_mode', 'biometric'),
+             ('cache_duration_seconds', '300'),
+             ('audit_granularity', 'summary');
+      ''',
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 3;',
     );
   }
 }

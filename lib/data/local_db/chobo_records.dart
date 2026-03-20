@@ -380,3 +380,21 @@ class ChoboStandardAccountSeed {
     );
   }
 }
+
+class ChoboAppSettings {
+  ChoboAppSettings._();
+
+  static const String appLockEnabled = 'app_lock_enabled';
+  static const String lockMode = 'lock_mode';
+  static const String cacheDurationSeconds = 'cache_duration_seconds';
+  static const String auditGranularity = 'audit_granularity';
+
+  static const String lockModeBiometric = 'biometric';
+  static const String lockModeNone = 'none';
+
+  static const String auditGranularityMinimal = 'minimal';
+  static const String auditGranularitySummary = 'summary';
+  static const String auditGranularityFull = 'full';
+
+  static const int defaultCacheDurationSeconds = 300;
+}
