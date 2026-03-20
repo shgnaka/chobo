@@ -29,6 +29,9 @@ class ChoboMigration {
           case 1:
             await _applyVersion1(migrator);
             break;
+          case 2:
+            await _applyVersion2(migrator);
+            break;
           default:
             throw UnsupportedError(
               'Schema migration to v$version is not implemented yet.',
@@ -46,7 +49,9 @@ class ChoboMigration {
       return const <int>[];
     }
 
-    return <int>[for (var version = from + 1; version <= to; version++) version];
+    return <int>[
+      for (var version = from + 1; version <= to; version++) version
+    ];
   }
 
   static Future<void> _applyVersion1(Migrator migrator) async {
@@ -55,6 +60,15 @@ class ChoboMigration {
     }
     await migrator.database.customStatement(
       'PRAGMA user_version = ${ChoboSchema.schemaVersion};',
+    );
+  }
+
+  static Future<void> _applyVersion2(Migrator migrator) async {
+    await migrator.database.customStatement(
+      "ALTER TABLE accounts ADD COLUMN currency TEXT NOT NULL DEFAULT 'JPY';",
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 2;',
     );
   }
 }

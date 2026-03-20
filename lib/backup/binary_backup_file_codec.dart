@@ -49,7 +49,8 @@ class BinaryBackupFileCodec implements BackupFileCodec {
 
     final version = reader.readUint16();
     if (version != formatVersion) {
-      throw BackupFormatException('Unsupported backup format version: $version');
+      throw BackupFormatException(
+          'Unsupported backup format version: $version');
     }
 
     final headerLength = reader.readUint32();

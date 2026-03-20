@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ChoboSchema', () {
     test('declares the first schema version', () {
-      expect(ChoboSchema.schemaVersion, 1);
+      expect(ChoboSchema.schemaVersion, 2);
     });
 
     test('includes the core tables required by the backup payload', () {
@@ -65,11 +65,13 @@ void main() {
       );
       expect(
         statements,
-        contains("status TEXT NOT NULL CHECK (status IN ('posted', 'pending', 'void'))"),
+        contains(
+            "status TEXT NOT NULL CHECK (status IN ('posted', 'pending', 'void'))"),
       );
       expect(
         statements,
-        contains("direction TEXT NOT NULL CHECK (direction IN ('increase', 'decrease'))"),
+        contains(
+            "direction TEXT NOT NULL CHECK (direction IN ('increase', 'decrease'))"),
       );
     });
   });

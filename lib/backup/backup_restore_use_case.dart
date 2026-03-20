@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'aes_gcm_v1_ciphertext_codec.dart';
 import 'backup_codec_exceptions.dart';
 import 'backup_file_codec.dart';
 import 'backup_file_envelope.dart';

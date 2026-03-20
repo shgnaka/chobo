@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:chobo/chobo.dart';
@@ -34,8 +33,8 @@ void main() {
       final bytes = codec.encode(envelope);
       final decoded = codec.decode(bytes);
 
-      expect(decoded.header.createdAt.toUtc(),
-          envelope.header.createdAt.toUtc());
+      expect(
+          decoded.header.createdAt.toUtc(), envelope.header.createdAt.toUtc());
       expect(decoded.optionalFooter, 'backup-footer');
       expect(decoded.ciphertext.length, 32);
       expect(decoded.authTag.length, 16);
@@ -47,8 +46,8 @@ void main() {
       final tampered = Uint8List.fromList(bytes);
       tampered[0] = 'X'.codeUnitAt(0);
 
-      expect(() => codec.decode(tampered),
-          throwsA(isA<BackupFormatException>()));
+      expect(
+          () => codec.decode(tampered), throwsA(isA<BackupFormatException>()));
     });
 
     test('rejects unsupported format versions', () {
@@ -58,8 +57,8 @@ void main() {
       tampered[8] = 2;
       tampered[9] = 0;
 
-      expect(() => codec.decode(tampered),
-          throwsA(isA<BackupFormatException>()));
+      expect(
+          () => codec.decode(tampered), throwsA(isA<BackupFormatException>()));
     });
 
     test('rejects truncated files', () {
@@ -67,8 +66,8 @@ void main() {
       final bytes = codec.encode(_sampleEnvelope(optionalFooter: ''));
       final truncated = Uint8List.sublistView(bytes, 0, bytes.length - 1);
 
-      expect(() => codec.decode(truncated),
-          throwsA(isA<BackupFormatException>()));
+      expect(
+          () => codec.decode(truncated), throwsA(isA<BackupFormatException>()));
     });
 
     test('rejects files with length mismatches', () {
@@ -80,8 +79,8 @@ void main() {
       final data = ByteData.sublistView(tampered);
       data.setUint32(headerLengthOffset, 9999, Endian.little);
 
-      expect(() => codec.decode(tampered),
-          throwsA(isA<BackupFormatException>()));
+      expect(
+          () => codec.decode(tampered), throwsA(isA<BackupFormatException>()));
     });
 
     test('rejects files with invalid UTF-8 headers', () {

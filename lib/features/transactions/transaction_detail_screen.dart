@@ -1,5 +1,4 @@
 import 'package:chobo/data/local_db/chobo_records.dart';
-import 'package:chobo/data/repository/transaction_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -161,15 +160,14 @@ class TransactionDetailScreen extends ConsumerWidget {
                         Text(decision.reason),
                         const SizedBox(height: 12),
                         _ActionButtons(
-                          voidLabel:
-                              decision.isClosedPeriod ? '締め後に取消' : '取消',
+                          voidLabel: decision.isClosedPeriod ? '締め後に取消' : '取消',
                           onDuplicate: () async {
                             await _duplicateTransaction(
                               context: context,
                               ref: ref,
                               transaction: transaction,
-                              entries:
-                                  entriesAsync.valueOrNull ?? const <ChoboEntryRecord>[],
+                              entries: entriesAsync.valueOrNull ??
+                                  const <ChoboEntryRecord>[],
                             );
                           },
                           onCorrection: decision.canApply
@@ -178,8 +176,8 @@ class TransactionDetailScreen extends ConsumerWidget {
                                     context: context,
                                     ref: ref,
                                     transaction: transaction,
-                                    entries:
-                                        entriesAsync.valueOrNull ?? const <ChoboEntryRecord>[],
+                                    entries: entriesAsync.valueOrNull ??
+                                        const <ChoboEntryRecord>[],
                                   );
                                 }
                               : null,
@@ -188,9 +186,12 @@ class TransactionDetailScreen extends ConsumerWidget {
                                   await ref
                                       .read(transactionRepositoryProvider)
                                       .voidTransaction(transactionId);
-                                  ref.invalidate(transactionProvider(transactionId));
-                                  ref.invalidate(transactionEntriesProvider(transactionId));
-                                  ref.invalidate(voidDecisionProvider(transactionId));
+                                  ref.invalidate(
+                                      transactionProvider(transactionId));
+                                  ref.invalidate(transactionEntriesProvider(
+                                      transactionId));
+                                  ref.invalidate(
+                                      voidDecisionProvider(transactionId));
                                   ref.invalidate(transactionsProvider);
                                 }
                               : null,

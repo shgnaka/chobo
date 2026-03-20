@@ -35,7 +35,8 @@ class AesGcmV1CiphertextCodec implements CiphertextCodec {
       );
 
       final output = Uint8List(cipher.getOutputSize(plaintext.length));
-      var length = cipher.processBytes(plaintext, 0, plaintext.length, output, 0);
+      var length =
+          cipher.processBytes(plaintext, 0, plaintext.length, output, 0);
       length += cipher.doFinal(output, length);
 
       if (length < authTagLengthBytes) {
@@ -47,9 +48,9 @@ class AesGcmV1CiphertextCodec implements CiphertextCodec {
       final authTag = Uint8List.sublistView(output, ciphertextLength, length);
       return CiphertextBox(ciphertext: ciphertext, authTag: authTag);
     } on InvalidCipherTextException catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to encrypt payload');
+      throw BackupCryptoException(error.message);
     } on ArgumentError catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to encrypt payload');
+      throw BackupCryptoException(error.message);
     }
   }
 
@@ -88,9 +89,9 @@ class AesGcmV1CiphertextCodec implements CiphertextCodec {
 
       return Uint8List.sublistView(output, 0, length);
     } on InvalidCipherTextException catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to decrypt payload');
+      throw BackupCryptoException(error.message);
     } on ArgumentError catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to decrypt payload');
+      throw BackupCryptoException(error.message);
     }
   }
 

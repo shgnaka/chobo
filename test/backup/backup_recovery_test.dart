@@ -26,7 +26,8 @@ void main() {
       expect(harness.temporaryDatabase.replaced, isFalse);
     });
 
-    test('keeps the primary database unchanged when secure storage is unavailable',
+    test(
+        'keeps the primary database unchanged when secure storage is unavailable',
         () {
       final harness = _RestoreHarness();
       harness.masterKeyStore.shouldThrow = true;
@@ -60,7 +61,8 @@ void main() {
       expect(harness.temporaryDatabase.replaced, isFalse);
     });
 
-    test('switches to the restored database only after final integrity succeeds',
+    test(
+        'switches to the restored database only after final integrity succeeds',
         () {
       final harness = _RestoreHarness();
 
@@ -290,7 +292,8 @@ void _rewriteHeaderField(
   final data = ByteData.sublistView(backupBytes);
   final headerLength = data.getUint32(10, Endian.little);
   final headerStart = 14;
-  final headerBytes = backupBytes.sublist(headerStart, headerStart + headerLength);
+  final headerBytes =
+      backupBytes.sublist(headerStart, headerStart + headerLength);
   final headerJson = utf8.decode(headerBytes);
   final map = Map<String, Object?>.from(
     jsonDecode(headerJson) as Map,

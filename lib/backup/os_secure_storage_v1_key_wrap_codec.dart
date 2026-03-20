@@ -43,8 +43,10 @@ class OsSecureStorageV1KeyWrapCodec implements KeyWrapCodec {
       }
 
       final wrappedDataKeyLength = length - wrapAuthTagLengthBytes;
-      final wrappedDataKey = Uint8List.sublistView(output, 0, wrappedDataKeyLength);
-      final wrapTag = Uint8List.sublistView(output, wrappedDataKeyLength, length);
+      final wrappedDataKey =
+          Uint8List.sublistView(output, 0, wrappedDataKeyLength);
+      final wrapTag =
+          Uint8List.sublistView(output, wrappedDataKeyLength, length);
 
       final bytes = BytesBuilder(copy: false)
         ..add(_u16(wrapVersion))
@@ -56,9 +58,9 @@ class OsSecureStorageV1KeyWrapCodec implements KeyWrapCodec {
         ..add(wrapTag);
       return bytes.toBytes();
     } on InvalidCipherTextException catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to wrap key');
+      throw BackupCryptoException(error.message);
     } on ArgumentError catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to wrap key');
+      throw BackupCryptoException(error.message);
     }
   }
 
@@ -107,9 +109,9 @@ class OsSecureStorageV1KeyWrapCodec implements KeyWrapCodec {
       length += cipher.doFinal(output, length);
       return Uint8List.sublistView(output, 0, length);
     } on InvalidCipherTextException catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to unwrap key');
+      throw BackupCryptoException(error.message);
     } on ArgumentError catch (error) {
-      throw BackupCryptoException(error.message ?? 'Unable to unwrap key');
+      throw BackupCryptoException(error.message);
     }
   }
 
