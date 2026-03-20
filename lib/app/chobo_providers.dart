@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/local_db/app_database.dart';
 import '../data/local_db/chobo_records.dart';
+import '../data/local_db/database_manager.dart';
 import '../backup/aes_gcm_v1_ciphertext_codec.dart';
+import '../backup/auto_backup_manager.dart';
 import '../backup/backup_header_json_codec.dart';
 import '../backup/backup_payload_json_codec.dart';
 import '../backup/backup_service.dart';
@@ -22,9 +24,7 @@ import '../data/service/reconciliation_service.dart';
 import '../core/auth_service.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
-  final db = AppDatabase();
-  ref.onDispose(db.close);
-  return db;
+  return ref.watch(databaseManagerProvider);
 });
 
 final accountRepositoryProvider = Provider<AccountRepository>((ref) {
@@ -84,6 +84,7 @@ final authServiceProvider = Provider<AuthService>((ref) {
 final backupServiceProvider = Provider<BackupService>((ref) {
   final masterKeyStore = ref.watch(backupMasterKeyStoreProvider);
   final authService = ref.watch(authServiceProvider);
+  final databaseManager = ref.read(databaseManagerProvider.notifier);
   return BackupService(
     payloadRepository: ref.watch(backupPayloadRepositoryProvider),
     loadMasterKey: masterKeyStore.load,
@@ -93,6 +94,7 @@ final backupServiceProvider = Provider<BackupService>((ref) {
     keyWrapCodec: const OsSecureStorageV1KeyWrapCodec(),
     ciphertextCodec: const AesGcmV1CiphertextCodec(),
     payloadCodec: const BackupPayloadJsonCodec(),
+    databaseManager: databaseManager,
   );
 });
 
@@ -133,4 +135,9 @@ final transactionEntriesProvider =
   return ref.watch(entryRepositoryProvider).listEntriesForTransaction(
         transactionId,
       );
+});
+
+final autoBackupManagerProvider = Provider<AutoBackupManager>((ref) {
+  final backupService = ref.watch(backupServiceProvider);
+  return AutoBackupManager(backupService: backupService);
 });
