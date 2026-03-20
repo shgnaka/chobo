@@ -6,21 +6,23 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Backup recovery flow', () {
-    test('keeps the primary database unchanged when restore is cancelled', () {
+    test('keeps the primary database unchanged when restore is cancelled',
+        () async {
       final harness = _RestoreHarness();
       harness.authorization.shouldThrow = true;
 
-      expect(() => harness.useCase.restore(harness.backupBytes),
+      await expectLater(() => harness.useCase.restore(harness.backupBytes),
           throwsA(isA<StateError>()));
       expect(harness.temporaryDatabase.imported, isFalse);
       expect(harness.temporaryDatabase.replaced, isFalse);
     });
 
-    test('keeps the primary database unchanged when authentication fails', () {
+    test('keeps the primary database unchanged when authentication fails',
+        () async {
       final harness = _RestoreHarness();
       harness.authorization.shouldThrow = true;
 
-      expect(() => harness.useCase.restore(harness.backupBytes),
+      await expectLater(() => harness.useCase.restore(harness.backupBytes),
           throwsA(isA<StateError>()));
       expect(harness.temporaryDatabase.imported, isFalse);
       expect(harness.temporaryDatabase.replaced, isFalse);
@@ -28,22 +30,22 @@ void main() {
 
     test(
         'keeps the primary database unchanged when secure storage is unavailable',
-        () {
+        () async {
       final harness = _RestoreHarness();
       harness.masterKeyStore.shouldThrow = true;
 
-      expect(() => harness.useCase.restore(harness.backupBytes),
+      await expectLater(() => harness.useCase.restore(harness.backupBytes),
           throwsA(isA<StateError>()));
       expect(harness.temporaryDatabase.imported, isFalse);
       expect(harness.temporaryDatabase.replaced, isFalse);
     });
 
     test('keeps the primary database unchanged when payload validation fails',
-        () {
+        () async {
       final harness = _RestoreHarness();
       harness.payloadValidator.shouldThrow = true;
 
-      expect(() => harness.useCase.restore(harness.backupBytes),
+      await expectLater(() => harness.useCase.restore(harness.backupBytes),
           throwsA(isA<StateError>()));
       expect(harness.temporaryDatabase.imported, isFalse);
       expect(harness.temporaryDatabase.replaced, isFalse);
@@ -51,11 +53,11 @@ void main() {
 
     test(
         'keeps the primary database unchanged when temporary database import fails',
-        () {
+        () async {
       final harness = _RestoreHarness();
       harness.temporaryDatabase.shouldThrowOnImport = true;
 
-      expect(() => harness.useCase.restore(harness.backupBytes),
+      await expectLater(() => harness.useCase.restore(harness.backupBytes),
           throwsA(isA<StateError>()));
       expect(harness.temporaryDatabase.imported, isFalse);
       expect(harness.temporaryDatabase.replaced, isFalse);
@@ -63,10 +65,10 @@ void main() {
 
     test(
         'switches to the restored database only after final integrity succeeds',
-        () {
+        () async {
       final harness = _RestoreHarness();
 
-      harness.useCase.restore(harness.backupBytes);
+      await harness.useCase.restore(harness.backupBytes);
 
       expect(harness.temporaryDatabase.imported, isTrue);
       expect(harness.temporaryDatabase.replaced, isTrue);
@@ -74,30 +76,30 @@ void main() {
       expect(harness.masterKeyStore.loaded, isTrue);
     });
 
-    test('rejects files whose payload format is unsupported', () {
+    test('rejects files whose payload format is unsupported', () async {
       final harness = _RestoreHarness();
       final bytes = Uint8List.fromList(harness.backupBytes);
       _rewriteHeaderField(bytes, 'payload_format', 'json-v9');
 
-      expect(() => harness.useCase.restore(bytes),
+      await expectLater(() => harness.useCase.restore(bytes),
           throwsA(isA<BackupFormatException>()));
     });
 
-    test('rejects files whose encryption scheme is unsupported', () {
+    test('rejects files whose encryption scheme is unsupported', () async {
       final harness = _RestoreHarness();
       final bytes = Uint8List.fromList(harness.backupBytes);
       _rewriteHeaderField(bytes, 'encryption_scheme', 'aes-gcm-v9');
 
-      expect(() => harness.useCase.restore(bytes),
+      await expectLater(() => harness.useCase.restore(bytes),
           throwsA(isA<BackupFormatException>()));
     });
 
-    test('rejects files whose key wrap scheme is unsupported', () {
+    test('rejects files whose key wrap scheme is unsupported', () async {
       final harness = _RestoreHarness();
       final bytes = Uint8List.fromList(harness.backupBytes);
       _rewriteHeaderField(bytes, 'key_wrap_scheme', 'os-secure-storage-v9');
 
-      expect(() => harness.useCase.restore(bytes),
+      await expectLater(() => harness.useCase.restore(bytes),
           throwsA(isA<BackupFormatException>()));
     });
   });
@@ -175,7 +177,7 @@ class _TemporaryDatabase implements TemporaryBackupDatabase {
   bool replaced = false;
 
   @override
-  void importPayload(BackupPayloadEnvelope payload) {
+  Future<void> importPayload(BackupPayloadEnvelope payload) async {
     if (shouldThrowOnImport) {
       throw StateError('temporary import failed');
     }
@@ -183,7 +185,7 @@ class _TemporaryDatabase implements TemporaryBackupDatabase {
   }
 
   @override
-  void replacePrimary() {
+  Future<void> replacePrimary() async {
     replaced = true;
   }
 }
