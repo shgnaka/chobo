@@ -1,7 +1,7 @@
 class ChoboSchema {
   ChoboSchema._();
 
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   static const String databaseFileName = 'chobo.sqlite';
 
@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   account_id TEXT PRIMARY KEY,
   kind TEXT NOT NULL CHECK (kind IN ('asset', 'liability', 'income', 'expense', 'equity')),
   name TEXT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'JPY',
   parent_account_id TEXT REFERENCES accounts(account_id) ON UPDATE CASCADE ON DELETE SET NULL,
   is_default INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0, 1)),
   is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1)),

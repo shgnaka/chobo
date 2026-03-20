@@ -7,6 +7,7 @@ class ChoboAccountRecord {
     required this.name,
     required this.createdAt,
     required this.updatedAt,
+    this.currency = 'JPY',
     this.parentAccountId,
     this.isDefault = false,
     this.isArchived = false,
@@ -15,6 +16,7 @@ class ChoboAccountRecord {
   final String accountId;
   final String kind;
   final String name;
+  final String currency;
   final String? parentAccountId;
   final bool isDefault;
   final bool isArchived;
@@ -25,6 +27,7 @@ class ChoboAccountRecord {
     String? accountId,
     String? kind,
     String? name,
+    String? currency,
     String? parentAccountId,
     bool? isDefault,
     bool? isArchived,
@@ -35,6 +38,7 @@ class ChoboAccountRecord {
       accountId: accountId ?? this.accountId,
       kind: kind ?? this.kind,
       name: name ?? this.name,
+      currency: currency ?? this.currency,
       parentAccountId: parentAccountId ?? this.parentAccountId,
       isDefault: isDefault ?? this.isDefault,
       isArchived: isArchived ?? this.isArchived,
@@ -48,6 +52,7 @@ class ChoboAccountRecord {
       'account_id': accountId,
       'kind': kind,
       'name': name,
+      'currency': currency,
       'parent_account_id': parentAccountId,
       'is_default': isDefault ? 1 : 0,
       'is_archived': isArchived ? 1 : 0,
@@ -61,6 +66,7 @@ class ChoboAccountRecord {
       accountId: row.read<String>('account_id'),
       kind: row.read<String>('kind'),
       name: row.read<String>('name'),
+      currency: row.read<String>('currency'),
       parentAccountId: row.readNullable<String>('parent_account_id'),
       isDefault: row.read<int>('is_default') == 1,
       isArchived: row.read<int>('is_archived') == 1,
@@ -244,4 +250,133 @@ class ChoboMonthlySummaryRecord {
   final int accruedExpenses;
   final int liabilityDue;
   final int cardPayment;
+}
+
+class ChoboClosureRecord {
+  const ChoboClosureRecord({
+    required this.closureId,
+    required this.startDate,
+    required this.endDate,
+    required this.closedAt,
+    this.note,
+  });
+
+  final String closureId;
+  final String startDate;
+  final String endDate;
+  final String closedAt;
+  final String? note;
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'closure_id': closureId,
+      'start_date': startDate,
+      'end_date': endDate,
+      'closed_at': closedAt,
+      'note': note,
+    };
+  }
+
+  static ChoboClosureRecord fromRow(QueryRow row) {
+    return ChoboClosureRecord(
+      closureId: row.read<String>('closure_id'),
+      startDate: row.read<String>('start_date'),
+      endDate: row.read<String>('end_date'),
+      closedAt: row.read<String>('closed_at'),
+      note: row.readNullable<String>('note'),
+    );
+  }
+}
+
+class ChoboSettingRecord {
+  const ChoboSettingRecord({
+    required this.settingKey,
+    required this.settingValue,
+  });
+
+  final String settingKey;
+  final String settingValue;
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'setting_key': settingKey,
+      'setting_value': settingValue,
+    };
+  }
+
+  static ChoboSettingRecord fromRow(QueryRow row) {
+    return ChoboSettingRecord(
+      settingKey: row.read<String>('setting_key'),
+      settingValue: row.read<String>('setting_value'),
+    );
+  }
+}
+
+class ChoboAuditEventRecord {
+  const ChoboAuditEventRecord({
+    required this.auditEventId,
+    required this.eventType,
+    required this.targetId,
+    required this.payload,
+    required this.createdAt,
+  });
+
+  final String auditEventId;
+  final String eventType;
+  final String targetId;
+  final String payload;
+  final String createdAt;
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'audit_event_id': auditEventId,
+      'event_type': eventType,
+      'target_id': targetId,
+      'payload': payload,
+      'created_at': createdAt,
+    };
+  }
+
+  static ChoboAuditEventRecord fromRow(QueryRow row) {
+    return ChoboAuditEventRecord(
+      auditEventId: row.read<String>('audit_event_id'),
+      eventType: row.read<String>('event_type'),
+      targetId: row.read<String>('target_id'),
+      payload: row.read<String>('payload'),
+      createdAt: row.read<String>('created_at'),
+    );
+  }
+}
+
+class ChoboStandardAccountDefinition {
+  const ChoboStandardAccountDefinition({
+    required this.accountId,
+    required this.kind,
+    required this.displayName,
+    this.currency = 'JPY',
+  });
+
+  final String accountId;
+  final String kind;
+  final String displayName;
+  final String currency;
+}
+
+class ChoboStandardAccountSeed {
+  const ChoboStandardAccountSeed(this.definition);
+
+  final ChoboStandardAccountDefinition definition;
+
+  ChoboAccountRecord toAccountRecord(String timestamp) {
+    return ChoboAccountRecord(
+      accountId: definition.accountId,
+      kind: definition.kind,
+      name: definition.displayName,
+      currency: definition.currency,
+      isDefault: true,
+      isArchived: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+  }
 }
