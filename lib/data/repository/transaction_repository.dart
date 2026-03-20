@@ -42,15 +42,50 @@ class TransactionRepository {
     return row == null ? null : ChoboTransactionRecord.fromRow(row);
   }
 
-  Future<List<ChoboTransactionRecord>> listTransactions() async {
-    final rows = await _db.customSelect(
-      '''
-      SELECT transaction_id, date, type, status, description, counterparty,
-             external_ref, period_lock_state, created_at, updated_at
-      FROM transactions
-      ORDER BY date DESC, created_at DESC, transaction_id DESC
-      ''',
-    ).get();
+  Future<List<ChoboTransactionRecord>> listTransactions([
+    TransactionFilter? filter,
+  ]) async {
+    final conditions = <String>[];
+    final variables = <Variable>[];
+
+    if (filter != null) {
+      if (filter.dateFrom != null) {
+        conditions.add('t.date >= ?');
+        variables.add(Variable(filter.dateFrom!));
+      }
+      if (filter.dateTo != null) {
+        conditions.add('t.date <= ?');
+        variables.add(Variable(filter.dateTo!));
+      }
+      if (filter.type != null) {
+        conditions.add('t.type = ?');
+        variables.add(Variable(filter.type!));
+      }
+      if (filter.status != null) {
+        conditions.add('t.status = ?');
+        variables.add(Variable(filter.status!));
+      }
+      if (filter.accountId != null) {
+        conditions.add('e.account_id = ?');
+        variables.add(Variable(filter.accountId!));
+      }
+    }
+
+    final whereClause =
+        conditions.isEmpty ? '' : 'WHERE ${conditions.join(' AND ')}';
+    final needsJoin = filter?.accountId != null;
+
+    final sql = '''
+      SELECT DISTINCT t.transaction_id, t.date, t.type, t.status,
+             t.description, t.counterparty, t.external_ref,
+             t.period_lock_state, t.created_at, t.updated_at
+      FROM transactions t
+      ${needsJoin ? 'INNER JOIN entries e ON t.transaction_id = e.transaction_id' : ''}
+      $whereClause
+      ORDER BY t.date DESC, t.created_at DESC, t.transaction_id DESC
+    ''';
+
+    final rows = await _db.customSelect(sql, variables: variables).get();
     return rows.map(ChoboTransactionRecord.fromRow).toList(growable: false);
   }
 
@@ -234,8 +269,8 @@ class TransactionRepository {
       );
     }
     _validateTransactionEntries(transaction.transactionId, entries);
-    final accountKinds = await _loadAccountKinds(entries);
-    _validateStandardShape(transaction, entries, accountKinds);
+    final accountInfo = await _loadAccountInfo(entries);
+    _validateStandardShape(transaction, entries, accountInfo);
   }
 
   Future<void> _insertTransaction(ChoboTransactionRecord transaction) async {
@@ -258,27 +293,30 @@ class TransactionRepository {
     );
   }
 
-  Future<List<String>> _loadAccountKinds(
+  Future<List<AccountInfo>> _loadAccountInfo(
     List<ChoboEntryRecord> entries,
   ) async {
-    final kinds = <String>[];
+    final infos = <AccountInfo>[];
     for (final entry in entries) {
       final row = await _db.customSelect(
-        'SELECT kind FROM accounts WHERE account_id = ?',
+        'SELECT kind, currency FROM accounts WHERE account_id = ?',
         variables: <Variable>[Variable(entry.accountId)],
       ).getSingleOrNull();
       if (row == null) {
         throw StateError('Account ${entry.accountId} was not found.');
       }
-      kinds.add(row.read<String>('kind'));
+      infos.add(AccountInfo(
+        kind: row.read<String>('kind'),
+        currency: row.read<String>('currency'),
+      ));
     }
-    return kinds;
+    return infos;
   }
 
   void _validateStandardShape(
     ChoboTransactionRecord transaction,
     List<ChoboEntryRecord> entries,
-    List<String> accountKinds,
+    List<AccountInfo> accountInfo,
   ) {
     if (entries.length != 2) {
       throw ArgumentError('A transaction must have exactly 2 entries.');
@@ -290,7 +328,7 @@ class TransactionRepository {
       throw ArgumentError('Duplicate entry ids are not allowed.');
     }
 
-    final kindSet = accountKinds.toSet();
+    final kindSet = accountInfo.map((info) => info.kind).toSet();
     final directionSet = entries.map((entry) => entry.direction).toSet();
 
     switch (transaction.type) {
@@ -306,6 +344,7 @@ class TransactionRepository {
         _expectKinds(kindSet, <String>{'asset'});
         _expectDirections(directionSet, <String>{'decrease', 'increase'});
         _expectDistinctAccounts(entries);
+        _expectSameCurrencies(accountInfo);
         break;
       case 'credit_expense':
         _expectKinds(kindSet, <String>{'liability', 'expense'});
@@ -354,6 +393,18 @@ class TransactionRepository {
     if (entries[0].accountId == entries[1].accountId) {
       throw ArgumentError(
           'Transfer entries must use different asset accounts.');
+    }
+  }
+
+  void _expectSameCurrencies(List<AccountInfo> accountInfo) {
+    if (accountInfo.length != 2) {
+      return;
+    }
+    if (accountInfo[0].currency != accountInfo[1].currency) {
+      throw ArgumentError(
+        'Transfer entries must use accounts with the same currency. '
+        'Found ${accountInfo[0].currency} and ${accountInfo[1].currency}.',
+      );
     }
   }
 
@@ -522,4 +573,30 @@ class TransactionSaveDecision {
   final bool isClosedPeriod;
   final bool canApply;
   final String reason;
+}
+
+class TransactionFilter {
+  const TransactionFilter({
+    this.dateFrom,
+    this.dateTo,
+    this.accountId,
+    this.type,
+    this.status,
+  });
+
+  final String? dateFrom;
+  final String? dateTo;
+  final String? accountId;
+  final String? type;
+  final String? status;
+}
+
+class AccountInfo {
+  const AccountInfo({
+    required this.kind,
+    required this.currency,
+  });
+
+  final String kind;
+  final String currency;
 }
