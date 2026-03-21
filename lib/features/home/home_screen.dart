@@ -39,6 +39,10 @@ class HomeScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
+              Text(
+                '取引一覧',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               ...transactions.map(
                 (transaction) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
