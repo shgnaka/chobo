@@ -4,25 +4,33 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ChoboSchema', () {
     test('declares the first schema version', () {
-      expect(ChoboSchema.schemaVersion, 2);
+      expect(ChoboSchema.schemaVersion, 5);
     });
 
     test('includes the core tables required by the backup payload', () {
       expect(
         ChoboSchema.createStatements,
-        hasLength(6),
+        hasLength(9),
       );
+      final combinedStatements = ChoboSchema.createStatements.join('\n');
       expect(
-        ChoboSchema.createStatements.join('\n'),
-        allOf(
-          contains('CREATE TABLE IF NOT EXISTS accounts'),
-          contains('CREATE TABLE IF NOT EXISTS transactions'),
-          contains('CREATE TABLE IF NOT EXISTS entries'),
-          contains('CREATE TABLE IF NOT EXISTS period_closures'),
-          contains('CREATE TABLE IF NOT EXISTS settings'),
-          contains('CREATE TABLE IF NOT EXISTS audit_events'),
-        ),
-      );
+          combinedStatements, contains('CREATE TABLE IF NOT EXISTS accounts'));
+      expect(combinedStatements,
+          contains('CREATE TABLE IF NOT EXISTS transactions'));
+      expect(
+          combinedStatements, contains('CREATE TABLE IF NOT EXISTS entries'));
+      expect(combinedStatements,
+          contains('CREATE TABLE IF NOT EXISTS period_closures'));
+      expect(
+          combinedStatements, contains('CREATE TABLE IF NOT EXISTS settings'));
+      expect(combinedStatements,
+          contains('CREATE TABLE IF NOT EXISTS audit_events'));
+      expect(combinedStatements,
+          contains('CREATE TABLE IF NOT EXISTS points_accounts'));
+      expect(combinedStatements,
+          contains('CREATE TABLE IF NOT EXISTS points_transactions'));
+      expect(combinedStatements,
+          contains('CREATE TABLE IF NOT EXISTS recurring_templates'));
     });
 
     test('keeps the foreign-key relationships that the domain depends on', () {
@@ -60,7 +68,7 @@ void main() {
       expect(
         statements,
         contains(
-          "type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment'))",
+          "type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment', 'advance_payment', 'reimbursement'))",
         ),
       );
       expect(
