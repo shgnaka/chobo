@@ -1,7 +1,7 @@
 class ChoboSchema {
   ChoboSchema._();
 
-  static const int schemaVersion = 5;
+  static const int schemaVersion = 8;
 
   static const String databaseFileName = 'chobo.sqlite';
 
@@ -14,6 +14,9 @@ class ChoboSchema {
   static const String pointsAccountsTable = 'points_accounts';
   static const String pointsTransactionsTable = 'points_transactions';
   static const String recurringTemplatesTable = 'recurring_templates';
+  static const String tagsTable = 'tags';
+  static const String transactionTagsTable = 'transaction_tags';
+  static const String counterpartiesTable = 'counterparties';
 
   static const List<String> createStatements = <String>[
     _createAccountsTable,
@@ -25,6 +28,9 @@ class ChoboSchema {
     _createPointsAccountsTable,
     _createPointsTransactionsTable,
     _createRecurringTemplatesTable,
+    _createTagsTable,
+    _createTransactionTagsTable,
+    _createCounterpartiesTable,
   ];
 
   static const List<String> createIndexStatements = <String>[
@@ -44,6 +50,10 @@ class ChoboSchema {
     'CREATE INDEX IF NOT EXISTS idx_points_transactions_created_at ON points_transactions(created_at);',
     'CREATE INDEX IF NOT EXISTS idx_recurring_templates_next_date ON recurring_templates(next_generation_date);',
     'CREATE INDEX IF NOT EXISTS idx_recurring_templates_is_active ON recurring_templates(is_active);',
+    'CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);',
+    'CREATE INDEX IF NOT EXISTS idx_transaction_tags_transaction_id ON transaction_tags(transaction_id);',
+    'CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id ON transaction_tags(tag_id);',
+    'CREATE INDEX IF NOT EXISTS idx_counterparties_normalized_name ON counterparties(normalized_name);',
   ];
 
   static const List<String> createAllStatements = <String>[
@@ -73,6 +83,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   status TEXT NOT NULL CHECK (status IN ('posted', 'pending', 'void')),
   description TEXT,
   counterparty TEXT,
+  counterparty_id TEXT REFERENCES counterparties(counterparty_id) ON UPDATE CASCADE ON DELETE SET NULL,
   external_ref TEXT,
   original_transaction_id TEXT REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE SET NULL,
   refund_type TEXT CHECK (refund_type IN ('full', 'partial') OR refund_type IS NULL),
@@ -165,6 +176,36 @@ CREATE TABLE IF NOT EXISTS recurring_templates (
   auto_post INTEGER NOT NULL DEFAULT 0 CHECK (auto_post IN (0, 1)),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+);
+''';
+
+  static const String _createTagsTable = '''
+CREATE TABLE IF NOT EXISTS tags (
+  tag_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  color TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE(name)
+);
+''';
+
+  static const String _createTransactionTagsTable = '''
+CREATE TABLE IF NOT EXISTS transaction_tags (
+  transaction_id TEXT NOT NULL REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  tag_id TEXT NOT NULL REFERENCES tags(tag_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  PRIMARY KEY (transaction_id, tag_id)
+);
+''';
+
+  static const String _createCounterpartiesTable = '''
+CREATE TABLE IF NOT EXISTS counterparties (
+  counterparty_id TEXT PRIMARY KEY,
+  normalized_name TEXT NOT NULL,
+  raw_name TEXT NOT NULL,
+  metadata TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(normalized_name)
 );
 ''';
 }

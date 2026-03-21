@@ -19,8 +19,10 @@ import '../data/repository/closure_repository.dart';
 import '../data/repository/entry_repository.dart';
 import '../data/repository/ledger_repository.dart';
 import '../data/repository/points_repository.dart';
+import '../data/repository/counterparty_repository.dart';
 import '../data/repository/recurring_template_repository.dart';
 import '../data/repository/settings_repository.dart';
+import '../data/repository/tag_repository.dart';
 import '../data/repository/transaction_repository.dart';
 import '../data/service/reconciliation_service.dart';
 import '../data/service/monthly_summary_service.dart';
@@ -175,6 +177,18 @@ final pointsRepositoryProvider = Provider<PointsRepository>((ref) {
 final recurringTemplateRepositoryProvider =
     Provider<RecurringTemplateRepository>((ref) {
   return RecurringTemplateRepository(ref.watch(appDatabaseProvider));
+});
+
+final tagRepositoryProvider = Provider<TagRepository>((ref) {
+  return TagRepository(ref.watch(appDatabaseProvider));
+});
+
+final counterpartyRepositoryProvider = Provider<CounterpartyRepository>((ref) {
+  return CounterpartyRepository(ref.watch(appDatabaseProvider));
+});
+
+final tagsProvider = FutureProvider<List<ChoboTagRecord>>((ref) async {
+  return ref.watch(tagRepositoryProvider).listTags();
 });
 
 final pointsCalculationServiceProvider =
