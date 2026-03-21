@@ -224,6 +224,140 @@ void main() {
       expect(correction, isA<ChoboTransactionRecord>());
       expect(correction!.status, 'posted');
     });
+
+    group('advance_payment transactions', () {
+      test('creates an advance_payment transaction between two assets',
+          () async {
+        final db = _openDb();
+        addTearDown(db.close);
+        final accounts = AccountRepository(db);
+        final transactions = TransactionRepository(db);
+
+        await accounts.createAccount(_sampleAccount(
+          accountId: 'asset:bank:main',
+          name: 'Main Bank',
+        ));
+        await accounts.createAccount(_sampleAccount(
+          accountId: 'asset:receivable',
+          name: 'Receivable',
+        ));
+
+        await transactions.createTransaction(
+          _sampleAdvancePaymentTransaction(transactionId: 'txn_adv_001'),
+          _sampleAdvancePaymentEntries(
+              transactionId: 'txn_adv_001', amount: 5000),
+        );
+
+        final txn = await transactions.getTransaction('txn_adv_001');
+        expect(txn != null, isTrue);
+        expect(txn!.type, 'advance_payment');
+        expect(txn.status, 'posted');
+      });
+
+      test('rejects advance_payment with same account', () async {
+        final db = _openDb();
+        addTearDown(db.close);
+        final accounts = AccountRepository(db);
+        final transactions = TransactionRepository(db);
+
+        await accounts.createAccount(_sampleAccount(
+          accountId: 'asset:bank:main',
+          name: 'Main Bank',
+        ));
+
+        await expectLater(
+          transactions.createTransaction(
+            _sampleAdvancePaymentTransaction(transactionId: 'txn_adv_002'),
+            [
+              ChoboEntryRecord(
+                entryId: 'ent_adv_1',
+                transactionId: 'txn_adv_002',
+                accountId: 'asset:bank:main',
+                direction: 'decrease',
+                amount: 1000,
+              ),
+              ChoboEntryRecord(
+                entryId: 'ent_adv_2',
+                transactionId: 'txn_adv_002',
+                accountId: 'asset:bank:main',
+                direction: 'increase',
+                amount: 1000,
+              ),
+            ],
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
+
+    group('reimbursement transactions', () {
+      test('creates a reimbursement transaction from asset to income',
+          () async {
+        final db = _openDb();
+        addTearDown(db.close);
+        final accounts = AccountRepository(db);
+        final transactions = TransactionRepository(db);
+
+        await accounts.createAccount(_sampleAccount(
+          accountId: 'asset:bank:main',
+          name: 'Main Bank',
+        ));
+        await accounts.createAccount(_sampleAccount(
+          accountId: 'income:side_job',
+          name: 'Side Job',
+        ));
+
+        await transactions.createTransaction(
+          _sampleReimbursementTransaction(transactionId: 'txn_reimb_001'),
+          _sampleReimbursementEntries(
+              transactionId: 'txn_reimb_001', amount: 10000),
+        );
+
+        final txn = await transactions.getTransaction('txn_reimb_001');
+        expect(txn != null, isTrue);
+        expect(txn!.type, 'reimbursement');
+        expect(txn.status, 'posted');
+      });
+
+      test('rejects reimbursement with expense account', () async {
+        final db = _openDb();
+        addTearDown(db.close);
+        final accounts = AccountRepository(db);
+        final transactions = TransactionRepository(db);
+
+        await accounts.createAccount(_sampleAccount(
+          accountId: 'asset:bank:main',
+          name: 'Main Bank',
+        ));
+        await accounts.createAccount(_sampleAccount(
+          accountId: 'expense:food',
+          name: 'Food',
+        ));
+
+        await expectLater(
+          transactions.createTransaction(
+            _sampleReimbursementTransaction(transactionId: 'txn_reimb_002'),
+            [
+              ChoboEntryRecord(
+                entryId: 'ent_reimb_1',
+                transactionId: 'txn_reimb_002',
+                accountId: 'asset:bank:main',
+                direction: 'increase',
+                amount: 2000,
+              ),
+              ChoboEntryRecord(
+                entryId: 'ent_reimb_2',
+                transactionId: 'txn_reimb_002',
+                accountId: 'expense:food',
+                direction: 'increase',
+                amount: 2000,
+              ),
+            ],
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
   });
 }
 
@@ -297,4 +431,84 @@ ChoboTransactionRecord _sampleTransaction({
     createdAt: '2026-03-20T09:00:00Z',
     updatedAt: updatedAt,
   );
+}
+
+ChoboTransactionRecord _sampleAdvancePaymentTransaction({
+  required String transactionId,
+  String date = '2026-03-20',
+  String status = 'posted',
+  String description = 'Advance payment',
+  String updatedAt = '2026-03-20T09:00:00Z',
+}) {
+  return ChoboTransactionRecord(
+    transactionId: transactionId,
+    date: date,
+    type: 'advance_payment',
+    status: status,
+    description: description,
+    createdAt: '2026-03-20T09:00:00Z',
+    updatedAt: updatedAt,
+  );
+}
+
+List<ChoboEntryRecord> _sampleAdvancePaymentEntries({
+  required String transactionId,
+  required int amount,
+}) {
+  return <ChoboEntryRecord>[
+    ChoboEntryRecord(
+      entryId: '${transactionId}_from',
+      transactionId: transactionId,
+      accountId: 'asset:bank:main',
+      direction: 'decrease',
+      amount: amount,
+    ),
+    ChoboEntryRecord(
+      entryId: '${transactionId}_to',
+      transactionId: transactionId,
+      accountId: 'asset:receivable',
+      direction: 'increase',
+      amount: amount,
+    ),
+  ];
+}
+
+ChoboTransactionRecord _sampleReimbursementTransaction({
+  required String transactionId,
+  String date = '2026-03-20',
+  String status = 'posted',
+  String description = 'Reimbursement',
+  String updatedAt = '2026-03-20T09:00:00Z',
+}) {
+  return ChoboTransactionRecord(
+    transactionId: transactionId,
+    date: date,
+    type: 'reimbursement',
+    status: status,
+    description: description,
+    createdAt: '2026-03-20T09:00:00Z',
+    updatedAt: updatedAt,
+  );
+}
+
+List<ChoboEntryRecord> _sampleReimbursementEntries({
+  required String transactionId,
+  required int amount,
+}) {
+  return <ChoboEntryRecord>[
+    ChoboEntryRecord(
+      entryId: '${transactionId}_asset',
+      transactionId: transactionId,
+      accountId: 'asset:bank:main',
+      direction: 'increase',
+      amount: amount,
+    ),
+    ChoboEntryRecord(
+      entryId: '${transactionId}_income',
+      transactionId: transactionId,
+      accountId: 'income:side_job',
+      direction: 'increase',
+      amount: amount,
+    ),
+  ];
 }
