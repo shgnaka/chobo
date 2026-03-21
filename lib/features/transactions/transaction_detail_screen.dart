@@ -221,6 +221,11 @@ class TransactionDetailScreen extends ConsumerWidget {
                                   ref.invalidate(transactionsProvider);
                                 }
                               : null,
+                          onRefund: transaction.status == 'posted' &&
+                                  !transaction.isRefund
+                              ? () =>
+                                  _showRefundDialog(context, ref, transaction)
+                              : null,
                         ),
                       ],
                     );
@@ -237,6 +242,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                           onDuplicate: null,
                           onCorrection: null,
                           onVoid: null,
+                          onRefund: null,
                         ),
                       ],
                     ),
@@ -346,6 +352,37 @@ class TransactionDetailScreen extends ConsumerWidget {
     }
   }
 
+  void _showRefundDialog(
+    BuildContext context,
+    WidgetRef ref,
+    ChoboTransactionRecord transaction,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('返金'),
+        content: Text('${transaction.description ?? 'この取引'}を返金しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('返金機能は開発中です'),
+                ),
+              );
+            },
+            child: const Text('返金'),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _generateTransactionId(String prefix) {
     return '${prefix}_${DateTime.now().toUtc().microsecondsSinceEpoch}';
   }
@@ -358,12 +395,14 @@ class _ActionButtons extends ConsumerWidget {
     required this.onDuplicate,
     required this.onCorrection,
     required this.onVoid,
+    this.onRefund,
   });
 
   final String voidLabel;
   final VoidCallback? onDuplicate;
   final VoidCallback? onCorrection;
   final VoidCallback? onVoid;
+  final VoidCallback? onRefund;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -380,6 +419,11 @@ class _ActionButtons extends ConsumerWidget {
           onPressed: onCorrection,
           child: Text(termService.getActionLabel(ActionTerm.correction)),
         ),
+        if (onRefund != null)
+          FilledButton.tonal(
+            onPressed: onRefund,
+            child: Text(termService.getActionLabel(ActionTerm.refund)),
+          ),
         FilledButton(
           onPressed: onVoid,
           child: Text(voidLabel),
