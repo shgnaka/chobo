@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../features/counterparties/counterparties_management_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/points/points_screen.dart';
 import '../features/recurring/recurring_screen.dart';
@@ -16,6 +17,10 @@ final GoRouter choboRouter = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/counterparties',
+      builder: (context, state) => const CounterpartiesManagementScreen(),
     ),
     GoRoute(
       path: '/points',
