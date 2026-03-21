@@ -96,11 +96,21 @@ class TransactionRepository {
         conditions.add('e.account_id = ?');
         variables.add(Variable(filter.accountId!));
       }
+      if (filter.tagId != null) {
+        conditions.add('tt.tag_id = ?');
+        variables.add(Variable(filter.tagId!));
+      }
+      if (filter.counterpartyId != null) {
+        conditions.add('t.counterparty_id = ?');
+        variables.add(Variable(filter.counterpartyId!));
+      }
     }
 
     final whereClause =
         conditions.isEmpty ? '' : 'WHERE ${conditions.join(' AND ')}';
-    final needsJoin = filter?.accountId != null;
+
+    final needsEntriesJoin = filter?.accountId != null;
+    final needsTagsJoin = filter?.tagId != null;
 
     final sql = '''
       SELECT DISTINCT t.transaction_id, t.date, t.type, t.status,
@@ -108,7 +118,8 @@ class TransactionRepository {
              t.original_transaction_id, t.refund_type,
              t.period_lock_state, t.created_at, t.updated_at
       FROM transactions t
-      ${needsJoin ? 'INNER JOIN entries e ON t.transaction_id = e.transaction_id' : ''}
+      ${needsEntriesJoin ? 'INNER JOIN entries e ON t.transaction_id = e.transaction_id' : ''}
+      ${needsTagsJoin ? 'INNER JOIN transaction_tags tt ON t.transaction_id = tt.transaction_id' : ''}
       $whereClause
       ORDER BY t.date DESC, t.created_at DESC, t.transaction_id DESC
     ''';
@@ -682,6 +693,8 @@ class TransactionFilter {
     this.accountId,
     this.type,
     this.status,
+    this.tagId,
+    this.counterpartyId,
   });
 
   final String? dateFrom;
@@ -689,6 +702,8 @@ class TransactionFilter {
   final String? accountId;
   final String? type;
   final String? status;
+  final String? tagId;
+  final String? counterpartyId;
 }
 
 class AccountInfo {
