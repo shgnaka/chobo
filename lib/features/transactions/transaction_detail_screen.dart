@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/chobo_providers.dart';
+import '../../core/terminology_labels.dart';
 
 class TransactionDetailScreen extends ConsumerWidget {
   const TransactionDetailScreen({
@@ -57,47 +58,65 @@ class TransactionDetailScreen extends ConsumerWidget {
             children: <Widget>[
               Text(
                 transaction.description ??
-                    _transactionTypeLabel(transaction.type),
+                    ref
+                        .watch(terminologyServiceProvider)
+                        .getTransactionLabelForType(transaction.type),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                '${transaction.date} · ${_statusLabel(transaction.status)}',
+                '${transaction.date} · ${ref.watch(terminologyServiceProvider).getStatusLabelForStatus(transaction.status)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
               _Section(
-                title: '概要',
+                title: ref
+                    .watch(terminologyServiceProvider)
+                    .getSectionLabel(SectionTerm.overview),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    _DetailRow(label: '取引日', value: transaction.date),
+                    _DetailRow(
+                        label: ref
+                            .watch(terminologyServiceProvider)
+                            .getFieldLabel(FieldTerm.transactionDate),
+                        value: transaction.date),
                     const SizedBox(height: 12),
                     _DetailRow(
                       label: '種別',
-                      value: _transactionTypeLabel(transaction.type),
+                      value: ref
+                          .watch(terminologyServiceProvider)
+                          .getTransactionLabelForType(transaction.type),
                     ),
                     const SizedBox(height: 12),
                     _DetailRow(
                       label: '状態',
-                      value: _statusLabel(transaction.status),
+                      value: ref
+                          .watch(terminologyServiceProvider)
+                          .getStatusLabelForStatus(transaction.status),
                     ),
                     const SizedBox(height: 12),
                     _DetailRow(
                       label: '締め状態',
-                      value: _periodLockStateLabel(transaction.periodLockState),
+                      value: ref
+                          .watch(terminologyServiceProvider)
+                          .getPeriodStateLabel(transaction.periodLockState),
                     ),
                     if (transaction.counterparty != null) ...[
                       const SizedBox(height: 12),
                       _DetailRow(
-                        label: '相手先',
+                        label: ref
+                            .watch(terminologyServiceProvider)
+                            .getFieldLabel(FieldTerm.counterparty),
                         value: transaction.counterparty!,
                       ),
                     ],
                     if (transaction.externalRef != null) ...[
                       const SizedBox(height: 12),
                       _DetailRow(
-                        label: '外部参照',
+                        label: ref
+                            .watch(terminologyServiceProvider)
+                            .getFieldLabel(FieldTerm.externalRef),
                         value: transaction.externalRef!,
                       ),
                     ],
@@ -106,7 +125,9 @@ class TransactionDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               _Section(
-                title: '明細',
+                title: ref
+                    .watch(terminologyServiceProvider)
+                    .getSectionLabel(SectionTerm.entries),
                 child: entriesAsync.when(
                   data: (entries) {
                     if (entries.isEmpty) {
@@ -115,20 +136,23 @@ class TransactionDetailScreen extends ConsumerWidget {
 
                     return Column(
                       children: entries.asMap().entries.map((entry) {
-                        final index = entry.key + 1;
+                        final index = entry.key;
                         final value = entry.value;
-                        final accountName =
-                            accountNames[value.accountId] ?? value.accountId;
+                        final termService =
+                            ref.watch(terminologyServiceProvider);
+                        final accountName = termService.getStandardAccountName(
+                            accountNames[value.accountId] ?? value.accountId);
 
                         return Padding(
                           padding: EdgeInsets.only(
                             bottom: index == entries.length ? 0 : 12,
                           ),
                           child: _EntryCard(
-                            index: index,
+                            entryIndex: index,
                             accountName: accountName,
                             accountId: value.accountId,
-                            directionLabel: _directionLabel(value.direction),
+                            directionLabel: termService
+                                .getDirectionLabelForDirection(value.direction),
                             amountLabel: _signedAmountLabel(
                               value.direction,
                               value.amount,
@@ -151,7 +175,9 @@ class TransactionDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               _Section(
-                title: '操作',
+                title: ref
+                    .watch(terminologyServiceProvider)
+                    .getSectionLabel(SectionTerm.operations),
                 child: decisionAsync.when(
                   data: (decision) {
                     return Column(
@@ -325,8 +351,9 @@ class TransactionDetailScreen extends ConsumerWidget {
   }
 }
 
-class _ActionButtons extends StatelessWidget {
+class _ActionButtons extends ConsumerWidget {
   const _ActionButtons({
+    super.key,
     required this.voidLabel,
     required this.onDuplicate,
     required this.onCorrection,
@@ -339,18 +366,19 @@ class _ActionButtons extends StatelessWidget {
   final VoidCallback? onVoid;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final termService = ref.watch(terminologyServiceProvider);
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       children: <Widget>[
         OutlinedButton(
           onPressed: onDuplicate,
-          child: const Text('複製'),
+          child: Text(termService.getActionLabel(ActionTerm.duplicate)),
         ),
         FilledButton.tonal(
           onPressed: onCorrection,
-          child: const Text('訂正'),
+          child: Text(termService.getActionLabel(ActionTerm.correction)),
         ),
         FilledButton(
           onPressed: onVoid,
@@ -388,9 +416,10 @@ class _Section extends StatelessWidget {
   }
 }
 
-class _EntryCard extends StatelessWidget {
+class _EntryCard extends ConsumerWidget {
   const _EntryCard({
-    required this.index,
+    super.key,
+    required this.entryIndex,
     required this.accountName,
     required this.accountId,
     required this.directionLabel,
@@ -399,7 +428,7 @@ class _EntryCard extends StatelessWidget {
     this.memo,
   });
 
-  final int index;
+  final int entryIndex;
   final String accountName;
   final String accountId;
   final String directionLabel;
@@ -408,8 +437,10 @@ class _EntryCard extends StatelessWidget {
   final String? memo;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final termService = ref.watch(terminologyServiceProvider);
+    final displayLabel = termService.getEntryLabelForIndex(entryIndex);
 
     return Card(
       elevation: 0,
@@ -427,7 +458,7 @@ class _EntryCard extends StatelessWidget {
                   backgroundColor: theme.colorScheme.primaryContainer,
                   foregroundColor: theme.colorScheme.onPrimaryContainer,
                   child: Text(
-                    '$index',
+                    '${entryIndex + 1}',
                     style: theme.textTheme.labelSmall,
                   ),
                 ),
@@ -462,7 +493,7 @@ class _EntryCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: <Widget>[
-                _Pill(label: directionLabel),
+                _Pill(label: displayLabel),
                 if (memo != null && memo!.isNotEmpty) _Pill(label: memo!),
               ],
             ),
@@ -528,58 +559,6 @@ class _DetailRow extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-String _directionLabel(String direction) {
-  switch (direction) {
-    case 'increase':
-      return '増加';
-    case 'decrease':
-      return '減少';
-    default:
-      return direction;
-  }
-}
-
-String _statusLabel(String status) {
-  switch (status) {
-    case 'posted':
-      return '計上済み';
-    case 'pending':
-      return '保留';
-    case 'void':
-      return '取消済み';
-    default:
-      return status;
-  }
-}
-
-String _transactionTypeLabel(String type) {
-  switch (type) {
-    case 'income':
-      return '収入';
-    case 'expense':
-      return '支出';
-    case 'transfer':
-      return '振替';
-    case 'credit_expense':
-      return 'カード支出';
-    case 'liability_payment':
-      return '負債返済';
-    default:
-      return type;
-  }
-}
-
-String _periodLockStateLabel(String state) {
-  switch (state) {
-    case 'open':
-      return '未締め';
-    case 'closed':
-      return '締め済み';
-    default:
-      return state;
   }
 }
 

@@ -397,4 +397,11 @@ class ChoboAppSettings {
   static const String auditGranularityFull = 'full';
 
   static const int defaultCacheDurationSeconds = 300;
+
+  static const String terminologyMode = 'terminology_mode';
+
+  static const String terminologyModeBasic = 'basic';
+  static const String terminologyModeAdvanced = 'advanced';
+
+  static const String defaultTerminologyMode = terminologyModeBasic;
 }

@@ -25,6 +25,8 @@ import '../data/service/monthly_summary_service.dart';
 import '../core/auth_service.dart';
 import '../core/audit_event_factory.dart';
 
+export '../core/terminology_service.dart';
+
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   return ref.watch(databaseManagerProvider);
 });

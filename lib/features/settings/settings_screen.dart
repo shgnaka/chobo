@@ -17,6 +17,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _appLockEnabled = false;
   bool _biometricAvailable = false;
   int _cacheDurationSeconds = ChoboAppSettings.defaultCacheDurationSeconds;
+  bool _isAdvancedTerminology = false;
 
   @override
   void initState() {
@@ -32,6 +33,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         await settingsRepo.getSetting(ChoboAppSettings.appLockEnabled);
     final cacheSetting =
         await settingsRepo.getSetting(ChoboAppSettings.cacheDurationSeconds);
+    final terminologySetting =
+        await settingsRepo.getSetting(ChoboAppSettings.terminologyMode);
     final biometricAvailable = await authService.isBiometricAvailable();
 
     if (mounted) {
@@ -41,6 +44,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _cacheDurationSeconds =
             int.tryParse(cacheSetting?.settingValue ?? '') ??
                 ChoboAppSettings.defaultCacheDurationSeconds;
+        _isAdvancedTerminology = terminologySetting?.settingValue ==
+            ChoboAppSettings.terminologyModeAdvanced;
         _isLoading = false;
       });
     }
@@ -87,6 +92,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       setState(() {
         _cacheDurationSeconds = seconds;
+      });
+    }
+  }
+
+  Future<void> _toggleTerminologyMode(bool advanced) async {
+    final mode = advanced
+        ? ChoboAppSettings.terminologyModeAdvanced
+        : ChoboAppSettings.terminologyModeBasic;
+
+    final notifier = ref.read(terminologyModeProvider.notifier);
+    await notifier.setMode(mode);
+
+    if (mounted) {
+      setState(() {
+        _isAdvancedTerminology = advanced;
       });
     }
   }
@@ -159,6 +179,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          const Divider(),
+          const _SectionHeader(title: 'Display'),
+          SwitchListTile(
+            title: const Text('Show Accounting Terminology'),
+            subtitle: const Text(
+              'Display terms like 借方/貸方 instead of 入/出',
+            ),
+            value: _isAdvancedTerminology,
+            onChanged: _toggleTerminologyMode,
+          ),
           const Divider(),
           const _SectionHeader(title: 'About'),
           const ListTile(

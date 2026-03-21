@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/chobo_providers.dart';
+import '../../core/terminology_labels.dart';
+import '../../core/terminology_service.dart';
 
 class TransactionEditScreen extends ConsumerStatefulWidget {
   const TransactionEditScreen({
@@ -39,6 +41,8 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
   bool _initialised = false;
   bool _saving = false;
   String _selectedType = 'expense';
+
+  TerminologyService get _termService => ref.read(terminologyServiceProvider);
 
   @override
   void dispose() {
@@ -87,7 +91,7 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('保存'),
+              : Text(_termService.getActionLabel(ActionTerm.save)),
         ),
       ),
       body: transactionAsync.when(
@@ -145,13 +149,14 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                   const SizedBox(height: 16),
                 ],
                 _Section(
-                  title: '基本情報',
+                  title: _termService.getSectionLabel(SectionTerm.basicInfo),
                   child: Column(
                     children: <Widget>[
                       TextFormField(
                         controller: _dateController,
-                        decoration: const InputDecoration(
-                          labelText: '取引日',
+                        decoration: InputDecoration(
+                          labelText: _termService
+                              .getFieldLabel(FieldTerm.transactionDate),
                           hintText: '2026-03-20',
                         ),
                         validator: (value) {
@@ -168,17 +173,11 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         value: _selectedType,
-                        decoration: const InputDecoration(
-                          labelText: '取引種別',
+                        decoration: InputDecoration(
+                          labelText: _termService
+                              .getFieldLabel(FieldTerm.transactionType),
                         ),
-                        items: _transactionTypeOptions
-                            .map(
-                              (option) => DropdownMenuItem<String>(
-                                value: option.value,
-                                child: Text(option.label),
-                              ),
-                            )
-                            .toList(growable: false),
+                        items: _buildTransactionTypeItems(),
                         onChanged: (value) {
                           if (value == null) {
                             return;
@@ -191,22 +190,25 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _descriptionController,
-                        decoration: const InputDecoration(
-                          labelText: '説明',
+                        decoration: InputDecoration(
+                          labelText:
+                              _termService.getFieldLabel(FieldTerm.description),
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _counterpartyController,
-                        decoration: const InputDecoration(
-                          labelText: '相手先',
+                        decoration: InputDecoration(
+                          labelText: _termService
+                              .getFieldLabel(FieldTerm.counterparty),
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _externalRefController,
-                        decoration: const InputDecoration(
-                          labelText: '外部参照',
+                        decoration: InputDecoration(
+                          labelText:
+                              _termService.getFieldLabel(FieldTerm.externalRef),
                         ),
                       ),
                     ],
@@ -214,12 +216,12 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                 ),
                 const SizedBox(height: 16),
                 _Section(
-                  title: '明細',
+                  title: _termService.getSectionLabel(SectionTerm.entries),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       _EditableEntryCard(
-                        label: '明細 1',
+                        entryIndex: 0,
                         accounts: accounts,
                         accountId: _selectedAccountIds[0],
                         onAccountChanged: (value) {
@@ -241,7 +243,7 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                       ),
                       const SizedBox(height: 12),
                       _EditableEntryCard(
-                        label: '明細 2',
+                        entryIndex: 1,
                         accounts: accounts,
                         accountId: _selectedAccountIds[1],
                         onAccountChanged: (value) {
@@ -392,6 +394,33 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
     final text = value.trim();
     return text.isEmpty ? null : text;
   }
+
+  List<DropdownMenuItem<String>> _buildTransactionTypeItems() {
+    return [
+      DropdownMenuItem<String>(
+        value: 'income',
+        child: Text(_termService.getTransactionLabel(TransactionTerm.income)),
+      ),
+      DropdownMenuItem<String>(
+        value: 'expense',
+        child: Text(_termService.getTransactionLabel(TransactionTerm.expense)),
+      ),
+      DropdownMenuItem<String>(
+        value: 'transfer',
+        child: Text(_termService.getTransactionLabel(TransactionTerm.transfer)),
+      ),
+      DropdownMenuItem<String>(
+        value: 'credit_expense',
+        child: Text(
+            _termService.getTransactionLabel(TransactionTerm.creditExpense)),
+      ),
+      DropdownMenuItem<String>(
+        value: 'liability_payment',
+        child: Text(
+            _termService.getTransactionLabel(TransactionTerm.liabilityPayment)),
+      ),
+    ];
+  }
 }
 
 class _Section extends StatelessWidget {
@@ -421,9 +450,10 @@ class _Section extends StatelessWidget {
   }
 }
 
-class _EditableEntryCard extends StatelessWidget {
+class _EditableEntryCard extends ConsumerWidget {
   const _EditableEntryCard({
-    required this.label,
+    super.key,
+    required this.entryIndex,
     required this.accounts,
     required this.accountId,
     required this.onAccountChanged,
@@ -433,7 +463,7 @@ class _EditableEntryCard extends StatelessWidget {
     required this.memoController,
   });
 
-  final String label;
+  final int entryIndex;
   final List<ChoboAccountRecord> accounts;
   final String? accountId;
   final ValueChanged<String?> onAccountChanged;
@@ -443,7 +473,8 @@ class _EditableEntryCard extends StatelessWidget {
   final TextEditingController memoController;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final termService = ref.watch(terminologyServiceProvider);
     return Card(
       elevation: 0,
       child: Padding(
@@ -451,21 +482,26 @@ class _EditableEntryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(label, style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              termService.getEntryLabelForIndex(entryIndex),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: accountId,
-              decoration: const InputDecoration(
-                labelText: '口座',
+              decoration: InputDecoration(
+                labelText: termService.getFieldLabel(FieldTerm.account),
               ),
-              items: accounts
-                  .map(
-                    (account) => DropdownMenuItem<String>(
-                      value: account.accountId,
-                      child: Text('${account.name} (${account.accountId})'),
-                    ),
-                  )
-                  .toList(growable: false),
+              items: accounts.map(
+                (account) {
+                  final displayName =
+                      termService.getStandardAccountName(account.name);
+                  return DropdownMenuItem<String>(
+                    value: account.accountId,
+                    child: Text('$displayName (${account.accountId})'),
+                  );
+                },
+              ).toList(growable: false),
               onChanged: onAccountChanged,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -477,17 +513,19 @@ class _EditableEntryCard extends StatelessWidget {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: direction,
-              decoration: const InputDecoration(
-                labelText: '方向',
+              decoration: InputDecoration(
+                labelText: termService.getFieldLabel(FieldTerm.direction),
               ),
-              items: const <DropdownMenuItem<String>>[
+              items: [
                 DropdownMenuItem<String>(
                   value: 'decrease',
-                  child: Text('減少'),
+                  child: Text(
+                      termService.getDirectionLabel(DirectionTerm.decrease)),
                 ),
                 DropdownMenuItem<String>(
                   value: 'increase',
-                  child: Text('増加'),
+                  child: Text(
+                      termService.getDirectionLabel(DirectionTerm.increase)),
                 ),
               ],
               onChanged: onDirectionChanged,
@@ -502,8 +540,8 @@ class _EditableEntryCard extends StatelessWidget {
             TextFormField(
               controller: amountController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: '金額',
+              decoration: InputDecoration(
+                labelText: termService.getFieldLabel(FieldTerm.amount),
               ),
               validator: (value) {
                 final amount = int.tryParse(value?.trim() ?? '');
@@ -516,8 +554,8 @@ class _EditableEntryCard extends StatelessWidget {
             const SizedBox(height: 16),
             TextFormField(
               controller: memoController,
-              decoration: const InputDecoration(
-                labelText: 'メモ',
+              decoration: InputDecoration(
+                labelText: termService.getFieldLabel(FieldTerm.memo),
               ),
             ),
           ],
@@ -526,19 +564,3 @@ class _EditableEntryCard extends StatelessWidget {
     );
   }
 }
-
-class _TransactionTypeOption {
-  const _TransactionTypeOption(this.value, this.label);
-
-  final String value;
-  final String label;
-}
-
-const List<_TransactionTypeOption> _transactionTypeOptions =
-    <_TransactionTypeOption>[
-  _TransactionTypeOption('income', '収入'),
-  _TransactionTypeOption('expense', '支出'),
-  _TransactionTypeOption('transfer', '振替'),
-  _TransactionTypeOption('credit_expense', 'カード支出'),
-  _TransactionTypeOption('liability_payment', '負債返済'),
-];
