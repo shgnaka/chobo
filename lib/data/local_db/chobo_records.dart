@@ -87,6 +87,8 @@ class ChoboTransactionRecord {
     this.description,
     this.counterparty,
     this.externalRef,
+    this.originalTransactionId,
+    this.refundType,
     this.periodLockState = 'open',
   });
 
@@ -97,6 +99,8 @@ class ChoboTransactionRecord {
   final String? description;
   final String? counterparty;
   final String? externalRef;
+  final String? originalTransactionId;
+  final String? refundType;
   final String periodLockState;
   final String createdAt;
   final String updatedAt;
@@ -109,6 +113,8 @@ class ChoboTransactionRecord {
     String? description,
     String? counterparty,
     String? externalRef,
+    String? originalTransactionId,
+    String? refundType,
     String? periodLockState,
     String? createdAt,
     String? updatedAt,
@@ -121,6 +127,9 @@ class ChoboTransactionRecord {
       description: description ?? this.description,
       counterparty: counterparty ?? this.counterparty,
       externalRef: externalRef ?? this.externalRef,
+      originalTransactionId:
+          originalTransactionId ?? this.originalTransactionId,
+      refundType: refundType ?? this.refundType,
       periodLockState: periodLockState ?? this.periodLockState,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -136,6 +145,8 @@ class ChoboTransactionRecord {
       'description': description,
       'counterparty': counterparty,
       'external_ref': externalRef,
+      'original_transaction_id': originalTransactionId,
+      'refund_type': refundType,
       'period_lock_state': periodLockState,
       'created_at': createdAt,
       'updated_at': updatedAt,
@@ -151,11 +162,18 @@ class ChoboTransactionRecord {
       description: row.readNullable<String>('description'),
       counterparty: row.readNullable<String>('counterparty'),
       externalRef: row.readNullable<String>('external_ref'),
+      originalTransactionId:
+          row.readNullable<String>('original_transaction_id'),
+      refundType: row.readNullable<String>('refund_type'),
       periodLockState: row.read<String>('period_lock_state'),
       createdAt: row.read<String>('created_at'),
       updatedAt: row.read<String>('updated_at'),
     );
   }
+
+  bool get isRefund => originalTransactionId != null;
+  bool get isFullRefund => refundType == 'full';
+  bool get isPartialRefund => refundType == 'partial';
 }
 
 class ChoboEntryRecord {
@@ -346,6 +364,319 @@ class ChoboAuditEventRecord {
       createdAt: row.read<String>('created_at'),
     );
   }
+}
+
+class ChoboPointsAccountRecord {
+  const ChoboPointsAccountRecord({
+    required this.pointsAccountId,
+    required this.name,
+    required this.pointsCurrency,
+    required this.exchangeRate,
+    required this.createdAt,
+    required this.updatedAt,
+    this.isDefault = false,
+    this.isArchived = false,
+  });
+
+  final String pointsAccountId;
+  final String name;
+  final String pointsCurrency;
+  final int exchangeRate;
+  final bool isDefault;
+  final bool isArchived;
+  final String createdAt;
+  final String updatedAt;
+
+  ChoboPointsAccountRecord copyWith({
+    String? pointsAccountId,
+    String? name,
+    String? pointsCurrency,
+    int? exchangeRate,
+    bool? isDefault,
+    bool? isArchived,
+    String? createdAt,
+    String? updatedAt,
+  }) {
+    return ChoboPointsAccountRecord(
+      pointsAccountId: pointsAccountId ?? this.pointsAccountId,
+      name: name ?? this.name,
+      pointsCurrency: pointsCurrency ?? this.pointsCurrency,
+      exchangeRate: exchangeRate ?? this.exchangeRate,
+      isDefault: isDefault ?? this.isDefault,
+      isArchived: isArchived ?? this.isArchived,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'points_account_id': pointsAccountId,
+      'name': name,
+      'points_currency': pointsCurrency,
+      'exchange_rate': exchangeRate,
+      'is_default': isDefault ? 1 : 0,
+      'is_archived': isArchived ? 1 : 0,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
+
+  static ChoboPointsAccountRecord fromRow(QueryRow row) {
+    return ChoboPointsAccountRecord(
+      pointsAccountId: row.read<String>('points_account_id'),
+      name: row.read<String>('name'),
+      pointsCurrency: row.read<String>('points_currency'),
+      exchangeRate: row.read<int>('exchange_rate'),
+      isDefault: row.read<int>('is_default') == 1,
+      isArchived: row.read<int>('is_archived') == 1,
+      createdAt: row.read<String>('created_at'),
+      updatedAt: row.read<String>('updated_at'),
+    );
+  }
+}
+
+class ChoboPointsTransactionRecord {
+  const ChoboPointsTransactionRecord({
+    required this.pointsTransactionId,
+    required this.pointsAccountId,
+    required this.direction,
+    required this.pointsAmount,
+    required this.occurredAt,
+    required this.createdAt,
+    this.transactionId,
+    this.jpyValue = 0,
+    this.description,
+    this.expirationDate,
+  });
+
+  final String pointsTransactionId;
+  final String pointsAccountId;
+  final String? transactionId;
+  final String direction;
+  final int pointsAmount;
+  final int jpyValue;
+  final String? description;
+  final String occurredAt;
+  final String? expirationDate;
+  final String createdAt;
+
+  bool get isExpired {
+    if (expirationDate == null) return false;
+    return DateTime.now().isAfter(DateTime.parse(expirationDate!));
+  }
+
+  bool get isExpiringSoon {
+    if (expirationDate == null) return false;
+    final thirtyDaysFromNow = DateTime.now().add(const Duration(days: 30));
+    final expDate = DateTime.parse(expirationDate!);
+    return expDate.isBefore(thirtyDaysFromNow) && !isExpired;
+  }
+
+  ChoboPointsTransactionRecord copyWith({
+    String? pointsTransactionId,
+    String? pointsAccountId,
+    String? transactionId,
+    String? direction,
+    int? pointsAmount,
+    int? jpyValue,
+    String? description,
+    String? occurredAt,
+    String? expirationDate,
+    String? createdAt,
+  }) {
+    return ChoboPointsTransactionRecord(
+      pointsTransactionId: pointsTransactionId ?? this.pointsTransactionId,
+      pointsAccountId: pointsAccountId ?? this.pointsAccountId,
+      transactionId: transactionId ?? this.transactionId,
+      direction: direction ?? this.direction,
+      pointsAmount: pointsAmount ?? this.pointsAmount,
+      jpyValue: jpyValue ?? this.jpyValue,
+      description: description ?? this.description,
+      occurredAt: occurredAt ?? this.occurredAt,
+      expirationDate: expirationDate ?? this.expirationDate,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'points_transaction_id': pointsTransactionId,
+      'points_account_id': pointsAccountId,
+      'transaction_id': transactionId,
+      'direction': direction,
+      'points_amount': pointsAmount,
+      'jpy_value': jpyValue,
+      'description': description,
+      'occurred_at': occurredAt,
+      'expiration_date': expirationDate,
+      'created_at': createdAt,
+    };
+  }
+
+  static ChoboPointsTransactionRecord fromRow(QueryRow row) {
+    return ChoboPointsTransactionRecord(
+      pointsTransactionId: row.read<String>('points_transaction_id'),
+      pointsAccountId: row.read<String>('points_account_id'),
+      transactionId: row.readNullable<String>('transaction_id'),
+      direction: row.read<String>('direction'),
+      pointsAmount: row.read<int>('points_amount'),
+      jpyValue: row.read<int>('jpy_value'),
+      description: row.readNullable<String>('description'),
+      occurredAt: row.read<String>('occurred_at'),
+      expirationDate: row.readNullable<String>('expiration_date'),
+      createdAt: row.read<String>('created_at'),
+    );
+  }
+}
+
+class ChoboPointsBalanceRecord {
+  const ChoboPointsBalanceRecord({
+    required this.pointsAccountId,
+    required this.totalEarned,
+    required this.totalRedeemed,
+    required this.totalExpired,
+    required this.totalAdjusted,
+    required this.currentBalance,
+  });
+
+  final String pointsAccountId;
+  final int totalEarned;
+  final int totalRedeemed;
+  final int totalExpired;
+  final int totalAdjusted;
+  final int currentBalance;
+
+  int get availableBalance =>
+      totalEarned - totalRedeemed - totalExpired + totalAdjusted;
+}
+
+class ChoboRecurringTemplateRecord {
+  const ChoboRecurringTemplateRecord({
+    required this.templateId,
+    required this.name,
+    required this.transactionType,
+    required this.frequency,
+    required this.intervalValue,
+    required this.startDate,
+    required this.entriesTemplate,
+    required this.createdAt,
+    required this.updatedAt,
+    this.endDate,
+    this.nextGenerationDate,
+    this.lastGeneratedTransactionId,
+    this.isActive = true,
+    this.autoPost = false,
+  });
+
+  final String templateId;
+  final String name;
+  final String transactionType;
+  final String frequency;
+  final int intervalValue;
+  final String startDate;
+  final String? endDate;
+  final String? nextGenerationDate;
+  final String? lastGeneratedTransactionId;
+  final String entriesTemplate;
+  final bool isActive;
+  final bool autoPost;
+  final String createdAt;
+  final String updatedAt;
+
+  ChoboRecurringTemplateRecord copyWith({
+    String? templateId,
+    String? name,
+    String? transactionType,
+    String? frequency,
+    int? intervalValue,
+    String? startDate,
+    String? endDate,
+    String? nextGenerationDate,
+    String? lastGeneratedTransactionId,
+    String? entriesTemplate,
+    bool? isActive,
+    bool? autoPost,
+    String? createdAt,
+    String? updatedAt,
+  }) {
+    return ChoboRecurringTemplateRecord(
+      templateId: templateId ?? this.templateId,
+      name: name ?? this.name,
+      transactionType: transactionType ?? this.transactionType,
+      frequency: frequency ?? this.frequency,
+      intervalValue: intervalValue ?? this.intervalValue,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      nextGenerationDate: nextGenerationDate ?? this.nextGenerationDate,
+      lastGeneratedTransactionId:
+          lastGeneratedTransactionId ?? this.lastGeneratedTransactionId,
+      entriesTemplate: entriesTemplate ?? this.entriesTemplate,
+      isActive: isActive ?? this.isActive,
+      autoPost: autoPost ?? this.autoPost,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'template_id': templateId,
+      'name': name,
+      'transaction_type': transactionType,
+      'frequency': frequency,
+      'interval_value': intervalValue,
+      'start_date': startDate,
+      'end_date': endDate,
+      'next_generation_date': nextGenerationDate,
+      'last_generated_transaction_id': lastGeneratedTransactionId,
+      'entries_template': entriesTemplate,
+      'is_active': isActive ? 1 : 0,
+      'auto_post': autoPost ? 1 : 0,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
+
+  static ChoboRecurringTemplateRecord fromRow(QueryRow row) {
+    return ChoboRecurringTemplateRecord(
+      templateId: row.read<String>('template_id'),
+      name: row.read<String>('name'),
+      transactionType: row.read<String>('transaction_type'),
+      frequency: row.read<String>('frequency'),
+      intervalValue: row.read<int>('interval_value'),
+      startDate: row.read<String>('start_date'),
+      endDate: row.readNullable<String>('end_date'),
+      nextGenerationDate: row.readNullable<String>('next_generation_date'),
+      lastGeneratedTransactionId:
+          row.readNullable<String>('last_generated_transaction_id'),
+      entriesTemplate: row.read<String>('entries_template'),
+      isActive: row.read<int>('is_active') == 1,
+      autoPost: row.read<int>('auto_post') == 1,
+      createdAt: row.read<String>('created_at'),
+      updatedAt: row.read<String>('updated_at'),
+    );
+  }
+
+  bool get isExpired {
+    if (endDate == null) return false;
+    return DateTime.parse(endDate!).isBefore(DateTime.now());
+  }
+
+  bool get shouldGenerate {
+    if (!isActive) return false;
+    if (isExpired) return false;
+    if (nextGenerationDate == null) return true;
+    return DateTime.parse(nextGenerationDate!).isBefore(DateTime.now()) ||
+        DateTime.parse(nextGenerationDate!).isAtSameMomentAs(DateTime.now());
+  }
+}
+
+enum RecurrenceFrequency {
+  daily,
+  weekly,
+  monthly,
+  yearly,
 }
 
 class ChoboStandardAccountDefinition {

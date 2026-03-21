@@ -1,7 +1,7 @@
 ---
 title: "CHOBO DB スキーマ仕様"
 date: "2026-03-20"
-updated: "2026-03-20"
+updated: "2026-03-21"
 status: "draft"
 source: "docs/chobo-spec-memo.md"
 ---
@@ -20,6 +20,9 @@ source: "docs/chobo-spec-memo.md"
 - 締め情報
 - 設定
 - 監査イベント
+- ポイント口座 (points_accounts)
+- ポイント取引 (points_transactions)
+- 定期取引テンプレート (recurring_templates)
 
 ## 2. 前提
 
@@ -79,11 +82,13 @@ source: "docs/chobo-spec-memo.md"
 | --- | --- | --- |
 | `transaction_id` | `TEXT` | `PRIMARY KEY` |
 | `date` | `TEXT` | `NOT NULL` |
-| `type` | `TEXT` | `NOT NULL` / `CHECK(type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment'))` |
+| `type` | `TEXT` | `NOT NULL` / `CHECK(type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment', 'advance_payment', 'reimbursement'))` |
 | `status` | `TEXT` | `NOT NULL` / `CHECK(status IN ('posted', 'pending', 'void'))` |
 | `description` | `TEXT` | 任意 |
 | `counterparty` | `TEXT` | 任意 |
 | `external_ref` | `TEXT` | 任意 |
+| `original_transaction_id` | `TEXT` | `REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE SET NULL` |
+| `refund_type` | `TEXT` | `CHECK(refund_type IN ('full', 'partial') OR refund_type IS NULL)` |
 | `period_lock_state` | `TEXT` | `NOT NULL DEFAULT 'open'` |
 | `created_at` | `TEXT` | `NOT NULL` |
 | `updated_at` | `TEXT` | `NOT NULL` |
@@ -198,6 +203,104 @@ source: "docs/chobo-spec-memo.md"
 - `created_at`
 - `target_id`
 
+### 4.7 `points_accounts`
+
+ポイントサービスの口座を保持する。
+
+#### 列
+
+| 列名 | 型 | 制約 |
+| --- | --- | --- |
+| `points_account_id` | `TEXT` | `PRIMARY KEY` |
+| `name` | `TEXT` | `NOT NULL` |
+| `points_currency` | `TEXT` | `NOT NULL` |
+| `exchange_rate` | `INTEGER` | `NOT NULL DEFAULT 1` / `CHECK(exchange_rate > 0)` |
+| `is_default` | `INTEGER` | `NOT NULL DEFAULT 0` / `CHECK(is_default IN (0, 1))` |
+| `is_archived` | `INTEGER` | `NOT NULL DEFAULT 0` / `CHECK(is_archived IN (0, 1))` |
+| `created_at` | `TEXT` | `NOT NULL` |
+| `updated_at` | `TEXT` | `NOT NULL` |
+
+#### 役割
+
+- T-Point、Rakuten Super Points などのポイント口座を管理する
+- `points_currency` はポイント記号（例: 'T', 'R'）
+- `exchange_rate` はポイント1单位のJPY価値
+
+#### 索引
+
+- `name`
+
+### 4.8 `points_transactions`
+
+ポイントの増減履歴を保持する。
+
+#### 列
+
+| 列名 | 型 | 制約 |
+| --- | --- | --- |
+| `points_transaction_id` | `TEXT` | `PRIMARY KEY` |
+| `points_account_id` | `TEXT` | `NOT NULL` / `REFERENCES points_accounts(points_account_id) ON UPDATE CASCADE ON DELETE CASCADE` |
+| `transaction_id` | `TEXT` | `REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE SET NULL` |
+| `direction` | `TEXT` | `NOT NULL` / `CHECK(direction IN ('earned', 'redeemed', 'expired', 'adjusted'))` |
+| `points_amount` | `INTEGER` | `NOT NULL` |
+| `jpy_value` | `INTEGER` | `NOT NULL DEFAULT 0` / `CHECK(jpy_value >= 0)` |
+| `description` | `TEXT` | 任意 |
+| `occurred_at` | `TEXT` | `NOT NULL` |
+| `expiration_date` | `TEXT` | 任意 |
+| `created_at` | `TEXT` | `NOT NULL` |
+
+#### 役割
+
+- ポイントの獲得，使用，失効、調整を記録する
+- `earned` はポイント獲得
+- `redeemed` はポイント使用
+- `expired` はポイント失効
+- `adjusted` は精算調整
+- `expiration_date` はポイントの失効予定日（earning時に設定）
+
+#### 索引
+
+- `points_account_id`
+- `transaction_id`
+- `created_at`
+
+### 4.9 `recurring_templates`
+
+定期取引のテンプレートを保持する。
+
+#### 列
+
+| 列名 | 型 | 制約 |
+| --- | --- | --- |
+| `template_id` | `TEXT` | `PRIMARY KEY` |
+| `name` | `TEXT` | `NOT NULL` |
+| `transaction_type` | `TEXT` | `NOT NULL` / `CHECK(transaction_type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment', 'advance_payment', 'reimbursement'))` |
+| `frequency` | `TEXT` | `NOT NULL` / `CHECK(frequency IN ('daily', 'weekly', 'monthly', 'yearly'))` |
+| `interval_value` | `INTEGER` | `NOT NULL DEFAULT 1` / `CHECK(interval_value > 0)` |
+| `start_date` | `TEXT` | `NOT NULL` |
+| `end_date` | `TEXT` | 任意 |
+| `next_generation_date` | `TEXT` | 任意 |
+| `last_generated_transaction_id` | `TEXT` | `REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE SET NULL` |
+| `entries_template` | `TEXT` | `NOT NULL` (JSON) |
+| `is_active` | `INTEGER` | `NOT NULL DEFAULT 1` / `CHECK(is_active IN (0, 1))` |
+| `auto_post` | `INTEGER` | `NOT NULL DEFAULT 0` / `CHECK(auto_post IN (0, 1))` |
+| `created_at` | `TEXT` | `NOT NULL` |
+| `updated_at` | `TEXT` | `NOT NULL` |
+
+#### 役割
+
+- 繰り返し取引のテンプレートを管理する
+- `frequency` は生成周期
+- `interval_value` は周期の間隔（例: 2週間隔）
+- `entries_template` はJSON形式で勘定と金額を記録
+- `is_active` は有効/一時停止
+- `auto_post` は自動計上するかどうか
+
+#### 索引
+
+- `next_generation_date`
+- `is_active`
+
 ## 5. 保存ルール
 
 1. すべての取引保存前にプロトコル整合性チェックを行う
@@ -231,13 +334,37 @@ DB 直接参照を各画面に散らさず、Repository を通す。
 
 - `AccountRepository`
 - `TransactionRepository`
+- `EntryRepository`
 - `ClosureRepository`
 - `ReconciliationRepository`
 - `SettingsRepository`
 - `AuditEventRepository`
+- `PointsRepository`
+- `RecurringTemplateRepository`
 
 ## 9. 変更時の注意
 
 - スキーマ変更時は `schema_version` を持つ前提で移行できるようにする
 - バックアップ復元時は、構造検証と整合性検証を分ける
 - 締め済みデータを壊す変更は、必ず移行ルールを明示する
+
+## 10. バージョン履歴
+
+| バージョン | 日付 | 変更内容 |
+| --- | --- | --- |
+| 1 | 2026-03-20 | MVP: 基本6テーブル |
+| 2 | - | (既存バージョン) |
+| 3 | - | (既存バージョン) |
+| 4 | 2026-03-21 | 取引型の拡張（advance_payment, reimbursement）、返金対応、定期取引対応 |
+| 5 | 2026-03-21 | ポイント失効日対応（expiration_date追加） |
+
+### バージョン4の変更点
+
+- `transactions` テーブルに `original_transaction_id`、`refund_type` 列を追加
+- `points_accounts`、`points_transactions` テーブルを追加
+- `recurring_templates` テーブルを追加
+
+### バージョン5の変更点
+
+- `points_transactions` テーブルに `expiration_date` 列を追加
+- 取引タイプに `advance_payment`、`reimbursement` を追加

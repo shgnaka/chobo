@@ -35,6 +35,12 @@ class ChoboMigration {
           case 3:
             await _applyVersion3(migrator);
             break;
+          case 4:
+            await _applyVersion4(migrator);
+            break;
+          case 5:
+            await _applyVersion5(migrator);
+            break;
           default:
             throw UnsupportedError(
               'Schema migration to v$version is not implemented yet.',
@@ -87,6 +93,94 @@ class ChoboMigration {
     );
     await migrator.database.customStatement(
       'PRAGMA user_version = 3;',
+    );
+  }
+
+  static Future<void> _applyVersion4(Migrator migrator) async {
+    await migrator.database.customStatement(
+      "ALTER TABLE transactions ADD COLUMN original_transaction_id TEXT REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE SET NULL;",
+    );
+    await migrator.database.customStatement(
+      "ALTER TABLE transactions ADD COLUMN refund_type TEXT CHECK (refund_type IN ('full', 'partial') OR refund_type IS NULL);",
+    );
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS points_accounts (
+        points_account_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        points_currency TEXT NOT NULL,
+        exchange_rate INTEGER NOT NULL DEFAULT 1 CHECK (exchange_rate > 0),
+        is_default INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0, 1)),
+        is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS points_transactions (
+        points_transaction_id TEXT PRIMARY KEY,
+        points_account_id TEXT NOT NULL REFERENCES points_accounts(points_account_id) ON UPDATE CASCADE ON DELETE CASCADE,
+        transaction_id TEXT REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE SET NULL,
+        direction TEXT NOT NULL CHECK (direction IN ('earned', 'redeemed', 'expired', 'adjusted')),
+        points_amount INTEGER NOT NULL,
+        jpy_value INTEGER NOT NULL DEFAULT 0 CHECK (jpy_value >= 0),
+        description TEXT,
+        occurred_at TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS recurring_templates (
+        template_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        transaction_type TEXT NOT NULL CHECK (transaction_type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment', 'advance_payment', 'reimbursement')),
+        frequency TEXT NOT NULL CHECK (frequency IN ('daily', 'weekly', 'monthly', 'yearly')),
+        interval_value INTEGER NOT NULL DEFAULT 1 CHECK (interval_value > 0),
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        next_generation_date TEXT,
+        last_generated_transaction_id TEXT REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE SET NULL,
+        entries_template TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+        auto_post INTEGER NOT NULL DEFAULT 0 CHECK (auto_post IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_points_accounts_name ON points_accounts(name);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_points_transactions_points_account_id ON points_transactions(points_account_id);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_points_transactions_transaction_id ON points_transactions(transaction_id);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_points_transactions_created_at ON points_transactions(created_at);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_recurring_templates_next_date ON recurring_templates(next_generation_date);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_recurring_templates_is_active ON recurring_templates(is_active);',
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 4;',
+    );
+  }
+
+  static Future<void> _applyVersion5(Migrator migrator) async {
+    await migrator.database.customStatement(
+      "ALTER TABLE points_transactions ADD COLUMN expiration_date TEXT;",
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 5;',
     );
   }
 }

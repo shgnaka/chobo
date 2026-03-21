@@ -59,7 +59,8 @@ class TransactionRepository {
     final row = await _db.customSelect(
       '''
       SELECT transaction_id, date, type, status, description, counterparty,
-             external_ref, period_lock_state, created_at, updated_at
+             external_ref, original_transaction_id, refund_type,
+             period_lock_state, created_at, updated_at
       FROM transactions
       WHERE transaction_id = ?
       ''',
@@ -104,6 +105,7 @@ class TransactionRepository {
     final sql = '''
       SELECT DISTINCT t.transaction_id, t.date, t.type, t.status,
              t.description, t.counterparty, t.external_ref,
+             t.original_transaction_id, t.refund_type,
              t.period_lock_state, t.created_at, t.updated_at
       FROM transactions t
       ${needsJoin ? 'INNER JOIN entries e ON t.transaction_id = e.transaction_id' : ''}
@@ -171,6 +173,8 @@ class TransactionRepository {
             description = ?,
             counterparty = ?,
             external_ref = ?,
+            original_transaction_id = ?,
+            refund_type = ?,
             period_lock_state = ?,
             created_at = ?,
             updated_at = ?
@@ -183,6 +187,8 @@ class TransactionRepository {
           Variable(transactionRecord.description),
           Variable(transactionRecord.counterparty),
           Variable(transactionRecord.externalRef),
+          Variable(transactionRecord.originalTransactionId),
+          Variable(transactionRecord.refundType),
           Variable(transactionRecord.periodLockState),
           Variable(transactionRecord.createdAt),
           Variable(transactionRecord.updatedAt),
@@ -362,10 +368,12 @@ class TransactionRepository {
         description,
         counterparty,
         external_ref,
+        original_transaction_id,
+        refund_type,
         period_lock_state,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ''',
       variables: _transactionVariables(transaction),
     );
@@ -431,6 +439,18 @@ class TransactionRepository {
       case 'liability_payment':
         _expectKinds(kindSet, <String>{'asset', 'liability'});
         _expectDirections(directionSet, <String>{'decrease'});
+        break;
+      case 'advance_payment':
+        if (!kindSet.every((k) => k == 'asset' || k == 'liability')) {
+          throw ArgumentError(
+              'Transaction entries do not match the save rule.');
+        }
+        _expectDirections(directionSet, <String>{'decrease', 'increase'});
+        _expectDistinctAccounts(entries);
+        break;
+      case 'reimbursement':
+        _expectKinds(kindSet, <String>{'asset', 'income'});
+        _expectDirections(directionSet, <String>{'increase'});
         break;
       default:
         throw ArgumentError(
@@ -533,6 +553,8 @@ class TransactionRepository {
       Variable(transaction.description),
       Variable(transaction.counterparty),
       Variable(transaction.externalRef),
+      Variable(transaction.originalTransactionId),
+      Variable(transaction.refundType),
       Variable(transaction.periodLockState),
       Variable(transaction.createdAt),
       Variable(transaction.updatedAt),

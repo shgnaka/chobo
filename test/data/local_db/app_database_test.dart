@@ -37,7 +37,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .read<int>('user_version'),
-        2,
+        5,
       );
     });
 
@@ -64,6 +64,12 @@ void main() {
           'idx_transactions_date',
           'idx_transactions_status',
           'idx_transactions_type',
+          'idx_points_accounts_name',
+          'idx_points_transactions_points_account_id',
+          'idx_points_transactions_transaction_id',
+          'idx_points_transactions_created_at',
+          'idx_recurring_templates_next_date',
+          'idx_recurring_templates_is_active',
         }),
       );
     });

@@ -419,6 +419,16 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
         child: Text(
             _termService.getTransactionLabel(TransactionTerm.liabilityPayment)),
       ),
+      DropdownMenuItem<String>(
+        value: 'advance_payment',
+        child: Text(
+            _termService.getTransactionLabel(TransactionTerm.advancePayment)),
+      ),
+      DropdownMenuItem<String>(
+        value: 'reimbursement',
+        child: Text(
+            _termService.getTransactionLabel(TransactionTerm.reimbursement)),
+      ),
     ];
   }
 }

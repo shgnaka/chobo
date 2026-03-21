@@ -18,10 +18,13 @@ import '../data/repository/backup_payload_repository.dart';
 import '../data/repository/closure_repository.dart';
 import '../data/repository/entry_repository.dart';
 import '../data/repository/ledger_repository.dart';
+import '../data/repository/points_repository.dart';
+import '../data/repository/recurring_template_repository.dart';
 import '../data/repository/settings_repository.dart';
 import '../data/repository/transaction_repository.dart';
 import '../data/service/reconciliation_service.dart';
 import '../data/service/monthly_summary_service.dart';
+import '../data/service/points_calculation_service.dart';
 import '../core/auth_service.dart';
 import '../core/audit_event_factory.dart';
 
@@ -163,4 +166,34 @@ final monthlySummaryServiceProvider = Provider<MonthlySummaryService>((ref) {
 
 final auditEventFactoryProvider = Provider<AuditEventFactory>((ref) {
   return AuditEventFactory(ref.watch(auditEventRepositoryProvider));
+});
+
+final pointsRepositoryProvider = Provider<PointsRepository>((ref) {
+  return PointsRepository(ref.watch(appDatabaseProvider));
+});
+
+final recurringTemplateRepositoryProvider =
+    Provider<RecurringTemplateRepository>((ref) {
+  return RecurringTemplateRepository(ref.watch(appDatabaseProvider));
+});
+
+final pointsCalculationServiceProvider =
+    Provider<PointsCalculationService>((ref) {
+  return PointsCalculationService(ref.watch(pointsRepositoryProvider));
+});
+
+final pointsAccountsProvider =
+    FutureProvider<List<ChoboPointsAccountRecord>>((ref) async {
+  return ref.watch(pointsRepositoryProvider).listPointsAccounts();
+});
+
+final recurringTemplatesProvider =
+    FutureProvider<List<ChoboRecurringTemplateRecord>>((ref) async {
+  return ref.watch(recurringTemplateRepositoryProvider).listTemplates();
+});
+
+final pointsBalanceProvider =
+    FutureProvider.family<ChoboPointsBalanceRecord, String>(
+        (ref, pointsAccountId) async {
+  return ref.watch(pointsRepositoryProvider).getPointsBalance(pointsAccountId);
 });

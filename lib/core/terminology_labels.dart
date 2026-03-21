@@ -4,6 +4,8 @@ enum TransactionTerm {
   transfer,
   creditExpense,
   liabilityPayment,
+  advancePayment,
+  reimbursement,
 }
 
 enum DirectionTerm {
@@ -39,6 +41,9 @@ enum ActionTerm {
   correction,
   cancel,
   voidAction,
+  refund,
+  refundFull,
+  refundPartial,
 }
 
 enum FieldTerm {
@@ -58,6 +63,23 @@ enum AccountKindTerm {
   liability,
   income,
   expense,
+}
+
+enum PointsDirectionTerm {
+  earned,
+  redeemed,
+  expired,
+  adjusted,
+}
+
+enum PointsTerm {
+  pointsAccount,
+  pointsBalance,
+  pointsHistory,
+  earnPoints,
+  redeemPoints,
+  expirePoints,
+  adjustPoints,
 }
 
 class TerminologyLabels {
@@ -83,6 +105,14 @@ class TerminologyLabels {
     TransactionTerm.liabilityPayment: {
       'basic': 'カードの支払い',
       'advanced': '負債返済',
+    },
+    TransactionTerm.advancePayment: {
+      'basic': '立替',
+      'advanced': '立替',
+    },
+    TransactionTerm.reimbursement: {
+      'basic': '精算',
+      'advanced': '精算',
     },
   };
 
@@ -179,6 +209,18 @@ class TerminologyLabels {
       'basic': '取消',
       'advanced': '取消',
     },
+    ActionTerm.refund: {
+      'basic': '返金',
+      'advanced': '返金',
+    },
+    ActionTerm.refundFull: {
+      'basic': '全額返金',
+      'advanced': '全額返金',
+    },
+    ActionTerm.refundPartial: {
+      'basic': '一部返金',
+      'advanced': '一部返金',
+    },
   };
 
   static const Map<FieldTerm, Map<String, String>> fields = {
@@ -236,6 +278,57 @@ class TerminologyLabels {
     AccountKindTerm.expense: {
       'basic': '支出',
       'advanced': '支出',
+    },
+  };
+
+  static const Map<PointsDirectionTerm, Map<String, String>> pointsDirections =
+      {
+    PointsDirectionTerm.earned: {
+      'basic': '獲得',
+      'advanced': 'ポイント獲得',
+    },
+    PointsDirectionTerm.redeemed: {
+      'basic': '使用',
+      'advanced': 'ポイント使用',
+    },
+    PointsDirectionTerm.expired: {
+      'basic': '失効',
+      'advanced': 'ポイント失効',
+    },
+    PointsDirectionTerm.adjusted: {
+      'basic': '調整',
+      'advanced': 'ポイント調整',
+    },
+  };
+
+  static const Map<PointsTerm, Map<String, String>> points = {
+    PointsTerm.pointsAccount: {
+      'basic': 'ポイント口座',
+      'advanced': 'ポイント口座',
+    },
+    PointsTerm.pointsBalance: {
+      'basic': '残高',
+      'advanced': 'ポイント残高',
+    },
+    PointsTerm.pointsHistory: {
+      'basic': '履歴',
+      'advanced': 'ポイント履歴',
+    },
+    PointsTerm.earnPoints: {
+      'basic': 'ポイントをためる',
+      'advanced': 'ポイント獲得',
+    },
+    PointsTerm.redeemPoints: {
+      'basic': 'ポイントを使う',
+      'advanced': 'ポイント使用',
+    },
+    PointsTerm.expirePoints: {
+      'basic': 'ポイントを失効させる',
+      'advanced': 'ポイント失効',
+    },
+    PointsTerm.adjustPoints: {
+      'basic': 'ポイントを調整する',
+      'advanced': 'ポイント調整',
     },
   };
 
