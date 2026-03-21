@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/chobo_providers.dart';
 import '../../core/terminology_labels.dart';
 import '../../core/terminology_service.dart';
+import '../../widgets/counterparty_widgets.dart';
+import '../../widgets/tag_widgets.dart';
 
 class TransactionEditScreen extends ConsumerStatefulWidget {
   const TransactionEditScreen({
@@ -38,6 +40,8 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
   final List<String?> _selectedAccountIds = <String?>[null, null];
   final List<String> _selectedDirections = <String>['decrease', 'increase'];
   final List<String> _originalEntryIds = <String>[];
+  List<String> _selectedTagIds = [];
+  ChoboCounterpartyRecord? _selectedCounterparty;
   bool _initialised = false;
   bool _saving = false;
   String _selectedType = 'expense';
@@ -134,6 +138,7 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
               _amountControllers[i].text = entries[i].amount.toString();
               _memoControllers[i].text = entries[i].memo ?? '';
             }
+            _loadTags();
           }
 
           return Form(
@@ -196,12 +201,13 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
+                      CounterpartyAutocomplete(
                         controller: _counterpartyController,
-                        decoration: InputDecoration(
-                          labelText: _termService
-                              .getFieldLabel(FieldTerm.counterparty),
-                        ),
+                        onSelected: (counterparty) {
+                          setState(() {
+                            _selectedCounterparty = counterparty;
+                          });
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -266,6 +272,19 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                _Section(
+                  title: 'タグ',
+                  child: TagSelector(
+                    transactionId: widget.transactionId,
+                    selectedTagIds: _selectedTagIds,
+                    onTagsChanged: (tagIds) {
+                      setState(() {
+                        _selectedTagIds = tagIds;
+                      });
+                    },
+                  ),
+                ),
                 const SizedBox(height: 88),
               ],
             ),
@@ -279,6 +298,17 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _loadTags() async {
+    final tagIds = await ref
+        .read(tagRepositoryProvider)
+        .getTagIdsForTransaction(widget.transactionId);
+    if (mounted) {
+      setState(() {
+        _selectedTagIds = tagIds;
+      });
+    }
   }
 
   Future<void> _save(
@@ -314,12 +344,20 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
     });
 
     try {
+      final counterpartyText = _counterpartyController.text.trim();
+      if (counterpartyText.isNotEmpty && _selectedCounterparty == null) {
+        _selectedCounterparty = await ref
+            .read(counterpartyRepositoryProvider)
+            .getOrCreateCounterparty(rawName: counterpartyText);
+      }
+
       final now = DateTime.now().toUtc().toIso8601String();
       final updatedTransaction = transaction.copyWith(
         date: _dateController.text.trim(),
         type: _selectedType,
         description: _emptyToNull(_descriptionController.text),
         counterparty: _emptyToNull(_counterpartyController.text),
+        counterpartyId: _selectedCounterparty?.counterpartyId,
         externalRef: _emptyToNull(_externalRefController.text),
         updatedAt: now,
       );
@@ -345,10 +383,18 @@ class _TransactionEditScreenState extends ConsumerState<TransactionEditScreen> {
       await ref
           .read(transactionRepositoryProvider)
           .updateTransaction(updatedTransaction, editedEntries);
+
+      await ref.read(tagRepositoryProvider).setTransactionTags(
+            transactionId: widget.transactionId,
+            tagIds: _selectedTagIds,
+          );
+
       ref.invalidate(transactionProvider(widget.transactionId));
       ref.invalidate(transactionEntriesProvider(widget.transactionId));
       ref.invalidate(voidDecisionProvider(widget.transactionId));
       ref.invalidate(transactionsProvider);
+      ref.invalidate(tagsProvider);
+      ref.invalidate(transactionTagsProvider(widget.transactionId));
       if (context.mounted) {
         context.pop();
       }

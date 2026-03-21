@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/chobo_providers.dart';
 import '../../core/terminology_labels.dart';
+import '../../widgets/tag_widgets.dart';
 
 class TransactionDetailScreen extends ConsumerWidget {
   const TransactionDetailScreen({
@@ -120,6 +121,8 @@ class TransactionDetailScreen extends ConsumerWidget {
                         value: transaction.externalRef!,
                       ),
                     ],
+                    const SizedBox(height: 12),
+                    _TagSection(transactionId: transactionId),
                   ],
                 ),
               ),
@@ -627,4 +630,36 @@ Color? _amountColor(BuildContext context, String direction) {
     return Theme.of(context).colorScheme.primary;
   }
   return null;
+}
+
+class _TagSection extends ConsumerWidget {
+  const _TagSection({required this.transactionId});
+
+  final String transactionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tagsAsync = ref.watch(transactionTagsProvider(transactionId));
+
+    return tagsAsync.when(
+      data: (tags) {
+        if (tags.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'タグ',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            TagDisplay(tags: tags),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
 }
