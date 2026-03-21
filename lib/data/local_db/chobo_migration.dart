@@ -41,6 +41,15 @@ class ChoboMigration {
           case 5:
             await _applyVersion5(migrator);
             break;
+          case 6:
+            await _applyVersion6(migrator);
+            break;
+          case 7:
+            await _applyVersion7(migrator);
+            break;
+          case 8:
+            await _applyVersion8(migrator);
+            break;
           default:
             throw UnsupportedError(
               'Schema migration to v$version is not implemented yet.',
@@ -181,6 +190,72 @@ class ChoboMigration {
     );
     await migrator.database.customStatement(
       'PRAGMA user_version = 5;',
+    );
+  }
+
+  static Future<void> _applyVersion6(Migrator migrator) async {
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS tags (
+        tag_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        color TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(name)
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS transaction_tags (
+        transaction_id TEXT NOT NULL REFERENCES transactions(transaction_id) ON UPDATE CASCADE ON DELETE CASCADE,
+        tag_id TEXT NOT NULL REFERENCES tags(tag_id) ON UPDATE CASCADE ON DELETE CASCADE,
+        PRIMARY KEY (transaction_id, tag_id)
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transaction_tags_transaction_id ON transaction_tags(transaction_id);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id ON transaction_tags(tag_id);',
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 6;',
+    );
+  }
+
+  static Future<void> _applyVersion7(Migrator migrator) async {
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS counterparties (
+        counterparty_id TEXT PRIMARY KEY,
+        normalized_name TEXT NOT NULL,
+        raw_name TEXT NOT NULL,
+        metadata TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(normalized_name)
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_counterparties_normalized_name ON counterparties(normalized_name);',
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 7;',
+    );
+  }
+
+  static Future<void> _applyVersion8(Migrator migrator) async {
+    await migrator.database.customStatement(
+      'ALTER TABLE transactions ADD COLUMN counterparty_id TEXT REFERENCES counterparties(counterparty_id) ON UPDATE CASCADE ON DELETE SET NULL;',
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 8;',
     );
   }
 }

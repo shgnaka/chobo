@@ -86,6 +86,7 @@ class ChoboTransactionRecord {
     required this.updatedAt,
     this.description,
     this.counterparty,
+    this.counterpartyId,
     this.externalRef,
     this.originalTransactionId,
     this.refundType,
@@ -98,6 +99,7 @@ class ChoboTransactionRecord {
   final String status;
   final String? description;
   final String? counterparty;
+  final String? counterpartyId;
   final String? externalRef;
   final String? originalTransactionId;
   final String? refundType;
@@ -112,6 +114,7 @@ class ChoboTransactionRecord {
     String? status,
     String? description,
     String? counterparty,
+    String? counterpartyId,
     String? externalRef,
     String? originalTransactionId,
     String? refundType,
@@ -126,6 +129,7 @@ class ChoboTransactionRecord {
       status: status ?? this.status,
       description: description ?? this.description,
       counterparty: counterparty ?? this.counterparty,
+      counterpartyId: counterpartyId ?? this.counterpartyId,
       externalRef: externalRef ?? this.externalRef,
       originalTransactionId:
           originalTransactionId ?? this.originalTransactionId,
@@ -144,6 +148,7 @@ class ChoboTransactionRecord {
       'status': status,
       'description': description,
       'counterparty': counterparty,
+      'counterparty_id': counterpartyId,
       'external_ref': externalRef,
       'original_transaction_id': originalTransactionId,
       'refund_type': refundType,
@@ -161,6 +166,7 @@ class ChoboTransactionRecord {
       status: row.read<String>('status'),
       description: row.readNullable<String>('description'),
       counterparty: row.readNullable<String>('counterparty'),
+      counterpartyId: row.readNullable<String>('counterparty_id'),
       externalRef: row.readNullable<String>('external_ref'),
       originalTransactionId:
           row.readNullable<String>('original_transaction_id'),
@@ -735,4 +741,132 @@ class ChoboAppSettings {
   static const String terminologyModeAdvanced = 'advanced';
 
   static const String defaultTerminologyMode = terminologyModeBasic;
+}
+
+class ChoboTagRecord {
+  const ChoboTagRecord({
+    required this.tagId,
+    required this.name,
+    this.color,
+    required this.createdAt,
+  });
+
+  final String tagId;
+  final String name;
+  final String? color;
+  final String createdAt;
+
+  ChoboTagRecord copyWith({
+    String? tagId,
+    String? name,
+    String? color,
+    String? createdAt,
+  }) {
+    return ChoboTagRecord(
+      tagId: tagId ?? this.tagId,
+      name: name ?? this.name,
+      color: color ?? this.color,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'tag_id': tagId,
+      'name': name,
+      'color': color,
+      'created_at': createdAt,
+    };
+  }
+
+  static ChoboTagRecord fromRow(QueryRow row) {
+    return ChoboTagRecord(
+      tagId: row.read<String>('tag_id'),
+      name: row.read<String>('name'),
+      color: row.readNullable<String>('color'),
+      createdAt: row.read<String>('created_at'),
+    );
+  }
+}
+
+class ChoboTransactionTagRecord {
+  const ChoboTransactionTagRecord({
+    required this.transactionId,
+    required this.tagId,
+  });
+
+  final String transactionId;
+  final String tagId;
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'transaction_id': transactionId,
+      'tag_id': tagId,
+    };
+  }
+
+  static ChoboTransactionTagRecord fromRow(QueryRow row) {
+    return ChoboTransactionTagRecord(
+      transactionId: row.read<String>('transaction_id'),
+      tagId: row.read<String>('tag_id'),
+    );
+  }
+}
+
+class ChoboCounterpartyRecord {
+  const ChoboCounterpartyRecord({
+    required this.counterpartyId,
+    required this.normalizedName,
+    required this.rawName,
+    this.metadata,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String counterpartyId;
+  final String normalizedName;
+  final String rawName;
+  final String? metadata;
+  final String createdAt;
+  final String updatedAt;
+
+  ChoboCounterpartyRecord copyWith({
+    String? counterpartyId,
+    String? normalizedName,
+    String? rawName,
+    String? metadata,
+    String? createdAt,
+    String? updatedAt,
+  }) {
+    return ChoboCounterpartyRecord(
+      counterpartyId: counterpartyId ?? this.counterpartyId,
+      normalizedName: normalizedName ?? this.normalizedName,
+      rawName: rawName ?? this.rawName,
+      metadata: metadata ?? this.metadata,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'counterparty_id': counterpartyId,
+      'normalized_name': normalizedName,
+      'raw_name': rawName,
+      'metadata': metadata,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
+
+  static ChoboCounterpartyRecord fromRow(QueryRow row) {
+    return ChoboCounterpartyRecord(
+      counterpartyId: row.read<String>('counterparty_id'),
+      normalizedName: row.read<String>('normalized_name'),
+      rawName: row.read<String>('raw_name'),
+      metadata: row.readNullable<String>('metadata'),
+      createdAt: row.read<String>('created_at'),
+      updatedAt: row.read<String>('updated_at'),
+    );
+  }
 }
