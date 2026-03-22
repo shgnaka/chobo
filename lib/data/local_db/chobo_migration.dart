@@ -50,6 +50,9 @@ class ChoboMigration {
           case 8:
             await _applyVersion8(migrator);
             break;
+          case 9:
+            await _applyVersion9(migrator);
+            break;
           default:
             throw UnsupportedError(
               'Schema migration to v$version is not implemented yet.',
@@ -256,6 +259,51 @@ class ChoboMigration {
     );
     await migrator.database.customStatement(
       'PRAGMA user_version = 8;',
+    );
+  }
+
+  static Future<void> _applyVersion9(Migrator migrator) async {
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS budgets (
+        budget_id TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL REFERENCES accounts(account_id) ON UPDATE CASCADE ON DELETE CASCADE,
+        month TEXT NOT NULL,
+        amount INTEGER NOT NULL CHECK (amount >= 0),
+        alert_threshold_percent INTEGER NOT NULL DEFAULT 80 CHECK (alert_threshold_percent >= 0 AND alert_threshold_percent <= 100),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(account_id, month)
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS budget_alerts (
+        alert_id TEXT PRIMARY KEY,
+        budget_id TEXT NOT NULL REFERENCES budgets(budget_id) ON UPDATE CASCADE ON DELETE CASCADE,
+        triggered_at TEXT NOT NULL,
+        actual_amount INTEGER NOT NULL,
+        budget_amount INTEGER NOT NULL,
+        threshold_percent INTEGER NOT NULL,
+        notified INTEGER NOT NULL DEFAULT 0 CHECK (notified IN (0, 1))
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_budgets_account_id ON budgets(account_id);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_budgets_month ON budgets(month);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_budget_alerts_budget_id ON budget_alerts(budget_id);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_budget_alerts_triggered_at ON budget_alerts(triggered_at);',
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 9;',
     );
   }
 }

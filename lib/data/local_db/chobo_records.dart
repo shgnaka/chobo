@@ -870,3 +870,132 @@ class ChoboCounterpartyRecord {
     );
   }
 }
+
+class ChoboBudgetRecord {
+  const ChoboBudgetRecord({
+    required this.budgetId,
+    required this.accountId,
+    required this.month,
+    required this.amount,
+    this.alertThresholdPercent = 80,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String budgetId;
+  final String accountId;
+  final String month;
+  final int amount;
+  final int alertThresholdPercent;
+  final String createdAt;
+  final String updatedAt;
+
+  ChoboBudgetRecord copyWith({
+    String? budgetId,
+    String? accountId,
+    String? month,
+    int? amount,
+    int? alertThresholdPercent,
+    String? createdAt,
+    String? updatedAt,
+  }) {
+    return ChoboBudgetRecord(
+      budgetId: budgetId ?? this.budgetId,
+      accountId: accountId ?? this.accountId,
+      month: month ?? this.month,
+      amount: amount ?? this.amount,
+      alertThresholdPercent:
+          alertThresholdPercent ?? this.alertThresholdPercent,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'budget_id': budgetId,
+      'account_id': accountId,
+      'month': month,
+      'amount': amount,
+      'alert_threshold_percent': alertThresholdPercent,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
+
+  static ChoboBudgetRecord fromRow(QueryRow row) {
+    return ChoboBudgetRecord(
+      budgetId: row.read<String>('budget_id'),
+      accountId: row.read<String>('account_id'),
+      month: row.read<String>('month'),
+      amount: row.read<int>('amount'),
+      alertThresholdPercent: row.read<int>('alert_threshold_percent'),
+      createdAt: row.read<String>('created_at'),
+      updatedAt: row.read<String>('updated_at'),
+    );
+  }
+}
+
+class ChoboBudgetAlertRecord {
+  const ChoboBudgetAlertRecord({
+    required this.alertId,
+    required this.budgetId,
+    required this.triggeredAt,
+    required this.actualAmount,
+    required this.budgetAmount,
+    required this.thresholdPercent,
+    this.notified = false,
+  });
+
+  final String alertId;
+  final String budgetId;
+  final String triggeredAt;
+  final int actualAmount;
+  final int budgetAmount;
+  final int thresholdPercent;
+  final bool notified;
+
+  ChoboBudgetAlertRecord copyWith({
+    String? alertId,
+    String? budgetId,
+    String? triggeredAt,
+    int? actualAmount,
+    int? budgetAmount,
+    int? thresholdPercent,
+    bool? notified,
+  }) {
+    return ChoboBudgetAlertRecord(
+      alertId: alertId ?? this.alertId,
+      budgetId: budgetId ?? this.budgetId,
+      triggeredAt: triggeredAt ?? this.triggeredAt,
+      actualAmount: actualAmount ?? this.actualAmount,
+      budgetAmount: budgetAmount ?? this.budgetAmount,
+      thresholdPercent: thresholdPercent ?? this.thresholdPercent,
+      notified: notified ?? this.notified,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'alert_id': alertId,
+      'budget_id': budgetId,
+      'triggered_at': triggeredAt,
+      'actual_amount': actualAmount,
+      'budget_amount': budgetAmount,
+      'threshold_percent': thresholdPercent,
+      'notified': notified ? 1 : 0,
+    };
+  }
+
+  static ChoboBudgetAlertRecord fromRow(QueryRow row) {
+    return ChoboBudgetAlertRecord(
+      alertId: row.read<String>('alert_id'),
+      budgetId: row.read<String>('budget_id'),
+      triggeredAt: row.read<String>('triggered_at'),
+      actualAmount: row.read<int>('actual_amount'),
+      budgetAmount: row.read<int>('budget_amount'),
+      thresholdPercent: row.read<int>('threshold_percent'),
+      notified: row.read<int>('notified') == 1,
+    );
+  }
+}

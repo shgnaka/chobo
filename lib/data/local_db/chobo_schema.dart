@@ -1,7 +1,7 @@
 class ChoboSchema {
   ChoboSchema._();
 
-  static const int schemaVersion = 8;
+  static const int schemaVersion = 9;
 
   static const String databaseFileName = 'chobo.sqlite';
 
@@ -17,6 +17,8 @@ class ChoboSchema {
   static const String tagsTable = 'tags';
   static const String transactionTagsTable = 'transaction_tags';
   static const String counterpartiesTable = 'counterparties';
+  static const String budgetsTable = 'budgets';
+  static const String budgetAlertsTable = 'budget_alerts';
 
   static const List<String> createStatements = <String>[
     _createAccountsTable,
@@ -31,6 +33,8 @@ class ChoboSchema {
     _createTagsTable,
     _createTransactionTagsTable,
     _createCounterpartiesTable,
+    _createBudgetsTable,
+    _createBudgetAlertsTable,
   ];
 
   static const List<String> createIndexStatements = <String>[
@@ -54,6 +58,10 @@ class ChoboSchema {
     'CREATE INDEX IF NOT EXISTS idx_transaction_tags_transaction_id ON transaction_tags(transaction_id);',
     'CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id ON transaction_tags(tag_id);',
     'CREATE INDEX IF NOT EXISTS idx_counterparties_normalized_name ON counterparties(normalized_name);',
+    'CREATE INDEX IF NOT EXISTS idx_budgets_account_id ON budgets(account_id);',
+    'CREATE INDEX IF NOT EXISTS idx_budgets_month ON budgets(month);',
+    'CREATE INDEX IF NOT EXISTS idx_budget_alerts_budget_id ON budget_alerts(budget_id);',
+    'CREATE INDEX IF NOT EXISTS idx_budget_alerts_triggered_at ON budget_alerts(triggered_at);',
   ];
 
   static const List<String> createAllStatements = <String>[
@@ -206,6 +214,31 @@ CREATE TABLE IF NOT EXISTS counterparties (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   UNIQUE(normalized_name)
+);
+''';
+
+  static const String _createBudgetsTable = '''
+CREATE TABLE IF NOT EXISTS budgets (
+  budget_id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES accounts(account_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  month TEXT NOT NULL,
+  amount INTEGER NOT NULL CHECK (amount >= 0),
+  alert_threshold_percent INTEGER NOT NULL DEFAULT 80 CHECK (alert_threshold_percent >= 0 AND alert_threshold_percent <= 100),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(account_id, month)
+);
+''';
+
+  static const String _createBudgetAlertsTable = '''
+CREATE TABLE IF NOT EXISTS budget_alerts (
+  alert_id TEXT PRIMARY KEY,
+  budget_id TEXT NOT NULL REFERENCES budgets(budget_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  triggered_at TEXT NOT NULL,
+  actual_amount INTEGER NOT NULL,
+  budget_amount INTEGER NOT NULL,
+  threshold_percent INTEGER NOT NULL,
+  notified INTEGER NOT NULL DEFAULT 0 CHECK (notified IN (0, 1))
 );
 ''';
 }
