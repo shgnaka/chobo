@@ -17,11 +17,21 @@ class HomeScreen extends ConsumerWidget {
         title: const Text('CHOBO'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/search'),
+            tooltip: '検索',
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
             tooltip: 'Settings',
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/transactions/new'),
+        icon: const Icon(Icons.add),
+        label: const Text('新規取引'),
       ),
       body: Column(
         children: [

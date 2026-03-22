@@ -4,13 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ChoboSchema', () {
     test('declares the first schema version', () {
-      expect(ChoboSchema.schemaVersion, 5);
+      expect(ChoboSchema.schemaVersion, 10);
     });
 
     test('includes the core tables required by the backup payload', () {
       expect(
         ChoboSchema.createStatements,
-        hasLength(9),
+        hasLength(16),
       );
       final combinedStatements = ChoboSchema.createStatements.join('\n');
       expect(

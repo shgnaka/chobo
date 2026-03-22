@@ -8,6 +8,8 @@ import '../features/settings/settings_screen.dart';
 import '../features/summary/monthly_summary_screen.dart';
 import '../features/transactions/transaction_detail_screen.dart';
 import '../features/transactions/transaction_edit_screen.dart';
+import '../features/transactions/transaction_create_screen.dart';
+import '../features/search/search_screen.dart';
 import '../features/budget/budget_screen.dart';
 
 final GoRouter choboRouter = GoRouter(
@@ -33,6 +35,10 @@ final GoRouter choboRouter = GoRouter(
       builder: (context, state) => const RecurringScreen(),
     ),
     GoRoute(
+      path: '/search',
+      builder: (context, state) => const SearchScreen(),
+    ),
+    GoRoute(
       path: '/summary/:month',
       builder: (context, state) {
         return MonthlySummaryScreen(
@@ -46,6 +52,13 @@ final GoRouter choboRouter = GoRouter(
         return BudgetScreen(
           month: state.pathParameters['month']!,
         );
+      },
+    ),
+    GoRoute(
+      path: '/transactions/new',
+      builder: (context, state) {
+        final templateId = state.uri.queryParameters['template'];
+        return TransactionCreateScreen(templateId: templateId);
       },
     ),
     GoRoute(

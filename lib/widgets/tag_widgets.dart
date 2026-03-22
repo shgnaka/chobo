@@ -22,12 +22,12 @@ final transactionTagsProvider =
 class TagSelector extends ConsumerStatefulWidget {
   const TagSelector({
     super.key,
-    required this.transactionId,
+    this.transactionId,
     required this.selectedTagIds,
     required this.onTagsChanged,
   });
 
-  final String transactionId;
+  final String? transactionId;
   final List<String> selectedTagIds;
   final ValueChanged<List<String>> onTagsChanged;
 

@@ -53,6 +53,9 @@ class ChoboMigration {
           case 9:
             await _applyVersion9(migrator);
             break;
+          case 10:
+            await _applyVersion10(migrator);
+            break;
           default:
             throw UnsupportedError(
               'Schema migration to v$version is not implemented yet.',
@@ -304,6 +307,62 @@ class ChoboMigration {
     );
     await migrator.database.customStatement(
       'PRAGMA user_version = 9;',
+    );
+  }
+
+  static Future<void> _applyVersion10(Migrator migrator) async {
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS transaction_templates (
+        template_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        transaction_type TEXT NOT NULL CHECK (transaction_type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment', 'advance_payment', 'reimbursement')),
+        entries_template TEXT NOT NULL,
+        default_description TEXT,
+        usage_count INTEGER NOT NULL DEFAULT 0,
+        last_used_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      '''
+      CREATE TABLE IF NOT EXISTS recent_selections (
+        selection_id TEXT PRIMARY KEY,
+        field_type TEXT NOT NULL CHECK (field_type IN ('account', 'counterparty', 'description', 'tag')),
+        field_value TEXT NOT NULL,
+        transaction_type TEXT,
+        frequency INTEGER NOT NULL DEFAULT 1,
+        last_selected_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(field_type, field_value, transaction_type)
+      );
+      ''',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transaction_templates_name ON transaction_templates(name);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transaction_templates_usage ON transaction_templates(usage_count DESC);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_recent_selections_field_type ON recent_selections(field_type);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_recent_selections_frequency ON recent_selections(frequency DESC);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_recent_selections_last_selected ON recent_selections(last_selected_at DESC);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_description ON transactions(description);',
+    );
+    await migrator.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_date_type_status ON transactions(date, type, status);',
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 10;',
     );
   }
 }
