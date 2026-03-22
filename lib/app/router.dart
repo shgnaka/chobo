@@ -8,6 +8,7 @@ import '../features/settings/settings_screen.dart';
 import '../features/summary/monthly_summary_screen.dart';
 import '../features/transactions/transaction_detail_screen.dart';
 import '../features/transactions/transaction_edit_screen.dart';
+import '../features/budget/budget_screen.dart';
 
 final GoRouter choboRouter = GoRouter(
   routes: <RouteBase>[
@@ -35,6 +36,14 @@ final GoRouter choboRouter = GoRouter(
       path: '/summary/:month',
       builder: (context, state) {
         return MonthlySummaryScreen(
+          month: state.pathParameters['month']!,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/budget/:month',
+      builder: (context, state) {
+        return BudgetScreen(
           month: state.pathParameters['month']!,
         );
       },
