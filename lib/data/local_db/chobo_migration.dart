@@ -56,6 +56,9 @@ class ChoboMigration {
           case 10:
             await _applyVersion10(migrator);
             break;
+          case 11:
+            await _applyVersion11(migrator);
+            break;
           default:
             throw UnsupportedError(
               'Schema migration to v$version is not implemented yet.',
@@ -363,6 +366,21 @@ class ChoboMigration {
     );
     await migrator.database.customStatement(
       'PRAGMA user_version = 10;',
+    );
+  }
+
+  static Future<void> _applyVersion11(Migrator migrator) async {
+    await migrator.database.customStatement(
+      "ALTER TABLE transactions ADD COLUMN due_date TEXT;",
+    );
+    await migrator.database.customStatement(
+      "ALTER TABLE accounts ADD COLUMN billing_day INTEGER CHECK (billing_day IS NULL OR (billing_day >= 1 AND billing_day <= 31));",
+    );
+    await migrator.database.customStatement(
+      "ALTER TABLE accounts ADD COLUMN payment_due_day INTEGER CHECK (payment_due_day IS NULL OR (payment_due_day >= 1 AND payment_due_day <= 31));",
+    );
+    await migrator.database.customStatement(
+      'PRAGMA user_version = 11;',
     );
   }
 }

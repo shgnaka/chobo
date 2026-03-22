@@ -25,9 +25,11 @@ class AccountRepository {
         parent_account_id,
         is_default,
         is_archived,
+        billing_day,
+        payment_due_day,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ''',
       variables: _accountVariables(account),
     );
@@ -102,7 +104,7 @@ class AccountRepository {
     final row = await _db.customSelect(
       '''
       SELECT account_id, kind, name, currency, parent_account_id, is_default, is_archived,
-             created_at, updated_at
+             billing_day, payment_due_day, created_at, updated_at
       FROM accounts
       WHERE account_id = ?
       ''',
@@ -115,7 +117,7 @@ class AccountRepository {
     final rows = await _db.customSelect(
       '''
       SELECT account_id, kind, name, currency, parent_account_id, is_default, is_archived,
-             created_at, updated_at
+             billing_day, payment_due_day, created_at, updated_at
       FROM accounts
       ORDER BY is_default DESC, name, account_id
       ''',
@@ -132,6 +134,10 @@ class AccountRepository {
       if (existing.currency != account.currency) changedFields.add('currency');
       if (existing.isArchived != account.isArchived)
         changedFields.add('is_archived');
+      if (existing.billingDay != account.billingDay)
+        changedFields.add('billing_day');
+      if (existing.paymentDueDay != account.paymentDueDay)
+        changedFields.add('payment_due_day');
     }
 
     final result = await _db.transaction(() async {
@@ -154,6 +160,8 @@ class AccountRepository {
             parent_account_id = ?,
             is_default = ?,
             is_archived = ?,
+            billing_day = ?,
+            payment_due_day = ?,
             created_at = ?,
             updated_at = ?
         WHERE account_id = ?
@@ -165,6 +173,8 @@ class AccountRepository {
           Variable(account.parentAccountId),
           Variable(account.isDefault ? 1 : 0),
           Variable(account.isArchived ? 1 : 0),
+          Variable(account.billingDay),
+          Variable(account.paymentDueDay),
           Variable(account.createdAt),
           Variable(account.updatedAt),
           Variable(account.accountId),
@@ -198,6 +208,8 @@ class AccountRepository {
       Variable(account.parentAccountId),
       Variable(account.isDefault ? 1 : 0),
       Variable(account.isArchived ? 1 : 0),
+      Variable(account.billingDay),
+      Variable(account.paymentDueDay),
       Variable(account.createdAt),
       Variable(account.updatedAt),
     ];

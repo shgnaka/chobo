@@ -1,7 +1,7 @@
 class ChoboSchema {
   ChoboSchema._();
 
-  static const int schemaVersion = 10;
+  static const int schemaVersion = 11;
 
   static const String databaseFileName = 'chobo.sqlite';
 
@@ -89,6 +89,8 @@ CREATE TABLE IF NOT EXISTS accounts (
   parent_account_id TEXT REFERENCES accounts(account_id) ON UPDATE CASCADE ON DELETE SET NULL,
   is_default INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0, 1)),
   is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1)),
+  billing_day INTEGER CHECK (billing_day IS NULL OR (billing_day >= 1 AND billing_day <= 31)),
+  payment_due_day INTEGER CHECK (payment_due_day IS NULL OR (payment_due_day >= 1 AND payment_due_day <= 31)),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -98,6 +100,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS transactions (
   transaction_id TEXT PRIMARY KEY,
   date TEXT NOT NULL,
+  due_date TEXT,
   type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer', 'credit_expense', 'liability_payment', 'advance_payment', 'reimbursement')),
   status TEXT NOT NULL CHECK (status IN ('posted', 'pending', 'void')),
   description TEXT,
