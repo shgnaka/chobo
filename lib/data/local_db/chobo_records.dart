@@ -936,6 +936,150 @@ class ChoboBudgetRecord {
   }
 }
 
+class ChoboTransactionTemplateRecord {
+  const ChoboTransactionTemplateRecord({
+    required this.templateId,
+    required this.name,
+    required this.transactionType,
+    required this.entriesTemplate,
+    this.defaultDescription,
+    this.usageCount = 0,
+    this.lastUsedAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String templateId;
+  final String name;
+  final String transactionType;
+  final String entriesTemplate;
+  final String? defaultDescription;
+  final int usageCount;
+  final String? lastUsedAt;
+  final String createdAt;
+  final String updatedAt;
+
+  ChoboTransactionTemplateRecord copyWith({
+    String? templateId,
+    String? name,
+    String? transactionType,
+    String? entriesTemplate,
+    String? defaultDescription,
+    int? usageCount,
+    String? lastUsedAt,
+    String? createdAt,
+    String? updatedAt,
+  }) {
+    return ChoboTransactionTemplateRecord(
+      templateId: templateId ?? this.templateId,
+      name: name ?? this.name,
+      transactionType: transactionType ?? this.transactionType,
+      entriesTemplate: entriesTemplate ?? this.entriesTemplate,
+      defaultDescription: defaultDescription ?? this.defaultDescription,
+      usageCount: usageCount ?? this.usageCount,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'template_id': templateId,
+      'name': name,
+      'transaction_type': transactionType,
+      'entries_template': entriesTemplate,
+      'default_description': defaultDescription,
+      'usage_count': usageCount,
+      'last_used_at': lastUsedAt,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
+
+  static ChoboTransactionTemplateRecord fromRow(QueryRow row) {
+    return ChoboTransactionTemplateRecord(
+      templateId: row.read<String>('template_id'),
+      name: row.read<String>('name'),
+      transactionType: row.read<String>('transaction_type'),
+      entriesTemplate: row.read<String>('entries_template'),
+      defaultDescription: row.readNullable<String>('default_description'),
+      usageCount: row.read<int>('usage_count'),
+      lastUsedAt: row.readNullable<String>('last_used_at'),
+      createdAt: row.read<String>('created_at'),
+      updatedAt: row.read<String>('updated_at'),
+    );
+  }
+}
+
+enum SelectionFieldType { account, counterparty, description, tag }
+
+class ChoboRecentSelectionRecord {
+  const ChoboRecentSelectionRecord({
+    required this.selectionId,
+    required this.fieldType,
+    required this.fieldValue,
+    this.transactionType,
+    this.frequency = 1,
+    required this.lastSelectedAt,
+    required this.createdAt,
+  });
+
+  final String selectionId;
+  final SelectionFieldType fieldType;
+  final String fieldValue;
+  final String? transactionType;
+  final int frequency;
+  final String lastSelectedAt;
+  final String createdAt;
+
+  ChoboRecentSelectionRecord copyWith({
+    String? selectionId,
+    SelectionFieldType? fieldType,
+    String? fieldValue,
+    String? transactionType,
+    int? frequency,
+    String? lastSelectedAt,
+    String? createdAt,
+  }) {
+    return ChoboRecentSelectionRecord(
+      selectionId: selectionId ?? this.selectionId,
+      fieldType: fieldType ?? this.fieldType,
+      fieldValue: fieldValue ?? this.fieldValue,
+      transactionType: transactionType ?? this.transactionType,
+      frequency: frequency ?? this.frequency,
+      lastSelectedAt: lastSelectedAt ?? this.lastSelectedAt,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, Object?> toDatabaseJson() {
+    return <String, Object?>{
+      'selection_id': selectionId,
+      'field_type': fieldType.name,
+      'field_value': fieldValue,
+      'transaction_type': transactionType,
+      'frequency': frequency,
+      'last_selected_at': lastSelectedAt,
+      'created_at': createdAt,
+    };
+  }
+
+  static ChoboRecentSelectionRecord fromRow(QueryRow row) {
+    return ChoboRecentSelectionRecord(
+      selectionId: row.read<String>('selection_id'),
+      fieldType: SelectionFieldType.values.firstWhere(
+        (e) => e.name == row.read<String>('field_type'),
+      ),
+      fieldValue: row.read<String>('field_value'),
+      transactionType: row.readNullable<String>('transaction_type'),
+      frequency: row.read<int>('frequency'),
+      lastSelectedAt: row.read<String>('last_selected_at'),
+      createdAt: row.read<String>('created_at'),
+    );
+  }
+}
+
 class ChoboBudgetAlertRecord {
   const ChoboBudgetAlertRecord({
     required this.alertId,
