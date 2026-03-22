@@ -26,6 +26,12 @@ import '../data/repository/tag_repository.dart';
 import '../data/repository/transaction_repository.dart';
 import '../data/repository/budget_repository.dart';
 import '../data/repository/budget_alert_repository.dart';
+import '../data/repository/transaction_search_repository.dart';
+import '../data/repository/template_repository.dart';
+import '../data/repository/autocomplete_repository.dart';
+import '../data/service/transaction_search_service.dart';
+import '../data/service/template_service.dart';
+import '../data/service/suggestion_service.dart';
 import '../data/service/reconciliation_service.dart';
 import '../data/service/monthly_summary_service.dart';
 import '../data/service/points_calculation_service.dart';
@@ -273,4 +279,32 @@ final endOfMonthForecastProvider =
 final recentBudgetAlertsProvider =
     FutureProvider<List<ChoboBudgetAlertRecord>>((ref) async {
   return ref.watch(budgetAlertServiceProvider).getRecentAlerts();
+});
+
+final transactionSearchRepositoryProvider =
+    Provider<TransactionSearchRepository>((ref) {
+  return TransactionSearchRepository(ref.watch(appDatabaseProvider));
+});
+
+final templateRepositoryProvider = Provider<TemplateRepository>((ref) {
+  return TemplateRepository(ref.watch(appDatabaseProvider));
+});
+
+final autocompleteRepositoryProvider = Provider<AutocompleteRepository>((ref) {
+  return AutocompleteRepository(ref.watch(appDatabaseProvider));
+});
+
+final transactionSearchServiceProvider =
+    Provider<TransactionSearchService>((ref) {
+  return TransactionSearchService(
+    ref.watch(transactionSearchRepositoryProvider),
+  );
+});
+
+final templateServiceProvider = Provider<TemplateService>((ref) {
+  return TemplateService(ref.watch(templateRepositoryProvider));
+});
+
+final suggestionServiceProvider = Provider<SuggestionService>((ref) {
+  return SuggestionService(ref.watch(autocompleteRepositoryProvider));
 });
