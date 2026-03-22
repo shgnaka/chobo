@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../backup/auto_backup_manager.dart';
 import '../core/app_logger.dart';
+import '../data/local_db/chobo_records.dart';
 import '../data/local_db/database_integrity_checker.dart';
 import 'chobo_app.dart';
 import 'chobo_providers.dart';
 import '../features/recovery/recovery_screen.dart';
+
+const _notificationPermissionRequestedKey = 'notification_permission_requested';
 
 class AppInitializer extends ConsumerStatefulWidget {
   const AppInitializer({super.key});
@@ -85,6 +87,38 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
     }
   }
 
+  Future<void> _requestNotificationPermission() async {
+    try {
+      final settingsRepo = ref.read(settingsRepositoryProvider);
+      final requested =
+          await settingsRepo.getSetting(_notificationPermissionRequestedKey);
+
+      if (requested == null) {
+        final notificationService = ref.read(notificationServiceProvider);
+        final granted = await notificationService.requestPermissions();
+        await settingsRepo.setSetting(
+          ChoboSettingRecord(
+            settingKey: _notificationPermissionRequestedKey,
+            settingValue: granted ? 'true' : 'denied',
+          ),
+        );
+        AppLogger.log(
+            'Notification permission ${granted ? 'granted' : 'denied'}');
+      }
+    } catch (e, stackTrace) {
+      AppLogger.logError(
+          'Failed to request notification permission', stackTrace);
+      try {
+        await ref.read(settingsRepositoryProvider).setSetting(
+              ChoboSettingRecord(
+                settingKey: _notificationPermissionRequestedKey,
+                settingValue: 'error',
+              ),
+            );
+      } catch (_) {}
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isChecking) {
@@ -102,6 +136,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
     // Trigger auto-backup after first frame is rendered
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _createAutoBackup();
+      _requestNotificationPermission();
     });
 
     return const ChoboApp();

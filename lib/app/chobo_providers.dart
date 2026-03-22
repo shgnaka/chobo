@@ -24,9 +24,15 @@ import '../data/repository/recurring_template_repository.dart';
 import '../data/repository/settings_repository.dart';
 import '../data/repository/tag_repository.dart';
 import '../data/repository/transaction_repository.dart';
+import '../data/repository/budget_repository.dart';
+import '../data/repository/budget_alert_repository.dart';
 import '../data/service/reconciliation_service.dart';
 import '../data/service/monthly_summary_service.dart';
 import '../data/service/points_calculation_service.dart';
+import '../data/service/budget_service.dart';
+import '../data/service/forecast_service.dart';
+import '../data/service/budget_alert_service.dart';
+import '../data/service/notification_service.dart';
 import '../core/auth_service.dart';
 import '../core/audit_event_factory.dart';
 
@@ -210,4 +216,61 @@ final pointsBalanceProvider =
     FutureProvider.family<ChoboPointsBalanceRecord, String>(
         (ref, pointsAccountId) async {
   return ref.watch(pointsRepositoryProvider).getPointsBalance(pointsAccountId);
+});
+
+final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
+  return BudgetRepository(ref.watch(appDatabaseProvider));
+});
+
+final budgetAlertRepositoryProvider = Provider<BudgetAlertRepository>((ref) {
+  return BudgetAlertRepository(ref.watch(appDatabaseProvider));
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
+});
+
+final budgetServiceProvider = Provider<BudgetService>((ref) {
+  return BudgetService(
+    ref.watch(budgetRepositoryProvider),
+    ref.watch(accountRepositoryProvider),
+    ref.watch(appDatabaseProvider),
+  );
+});
+
+final forecastServiceProvider = Provider<ForecastService>((ref) {
+  return ForecastService(
+    ref.watch(appDatabaseProvider),
+    ref.watch(recurringTemplateRepositoryProvider),
+  );
+});
+
+final budgetAlertServiceProvider = Provider<BudgetAlertService>((ref) {
+  return BudgetAlertService(
+    ref.watch(budgetAlertRepositoryProvider),
+    ref.watch(budgetRepositoryProvider),
+    ref.watch(budgetServiceProvider),
+    ref.watch(notificationServiceProvider),
+  );
+});
+
+final monthlyBudgetProvider =
+    FutureProvider.family<MonthlyBudgetDto, String>((ref, month) async {
+  return ref.watch(budgetServiceProvider).getMonthlyBudget(month);
+});
+
+final budgetComparisonsProvider =
+    FutureProvider.family<List<BudgetComparisonDto>, String>(
+        (ref, month) async {
+  return ref.watch(budgetServiceProvider).getBudgetComparisons(month);
+});
+
+final endOfMonthForecastProvider =
+    FutureProvider.family<EndOfMonthForecastDto, String>((ref, month) async {
+  return ref.watch(forecastServiceProvider).getEndOfMonthForecast(month);
+});
+
+final recentBudgetAlertsProvider =
+    FutureProvider<List<ChoboBudgetAlertRecord>>((ref) async {
+  return ref.watch(budgetAlertServiceProvider).getRecentAlerts();
 });
