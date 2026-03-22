@@ -21,6 +21,7 @@ dependencies:
   pointycastle: ^3.9.1
   sqlite3: ^3.2.0
   package_info_plus: ^8.0.0
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:
