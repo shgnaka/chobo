@@ -65,16 +65,25 @@ class LedgerRepository {
         _addTotal(transferTotals, accountName, amount);
       }
 
+      // cashOutExpenses: Direct payments from asset accounts.
+      // Example: Paying groceries with bank debit card.
+      // Formula: expense transaction + asset account decreased.
+      // NOTE: This is NOT credit card charges (see accruedExpenses).
       if (transactionType == 'expense' &&
           accountKind == 'asset' &&
           direction == 'decrease') {
         cashOutExpenses += amount;
       }
 
+      // accruedExpenses: Credit card charges (unpaid at month end).
+      // These will become cash-out when card bill is paid.
+      // Formula: credit_expense transaction.
       if (transactionType == 'credit_expense' && accountKind == 'expense') {
         accruedExpenses += amount;
       }
 
+      // cardPayment: Paying off credit card balance.
+      // Formula: liability_payment transaction + liability account decreased.
       if (transactionType == 'liability_payment' &&
           accountKind == 'liability' &&
           direction == 'decrease') {
