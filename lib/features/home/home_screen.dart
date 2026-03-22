@@ -95,6 +95,14 @@ class _QuickActionsBar extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: _QuickActionButton(
+              icon: Icons.wallet,
+              label: '予算',
+              onTap: () => context.push('/budget/$month'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _QuickActionButton(
               icon: Icons.repeat,
               label: '定期',
               onTap: () => context.push('/recurring'),
