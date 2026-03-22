@@ -58,7 +58,7 @@ class TransactionRepository {
   Future<ChoboTransactionRecord?> getTransaction(String transactionId) async {
     final row = await _db.customSelect(
       '''
-      SELECT transaction_id, date, type, status, description, counterparty,
+      SELECT transaction_id, date, due_date, type, status, description, counterparty,
              external_ref, original_transaction_id, refund_type,
              period_lock_state, created_at, updated_at
       FROM transactions
@@ -113,7 +113,7 @@ class TransactionRepository {
     final needsTagsJoin = filter?.tagId != null;
 
     final sql = '''
-      SELECT DISTINCT t.transaction_id, t.date, t.type, t.status,
+      SELECT DISTINCT t.transaction_id, t.date, t.due_date, t.type, t.status,
              t.description, t.counterparty, t.external_ref,
              t.original_transaction_id, t.refund_type,
              t.period_lock_state, t.created_at, t.updated_at
@@ -137,6 +137,8 @@ class TransactionRepository {
 
     if (existing != null) {
       if (existing.date != transactionRecord.date) changedFields.add('date');
+      if (existing.dueDate != transactionRecord.dueDate)
+        changedFields.add('due_date');
       if (existing.type != transactionRecord.type) changedFields.add('type');
       if (existing.status != transactionRecord.status)
         changedFields.add('status');
@@ -179,6 +181,7 @@ class TransactionRepository {
         '''
         UPDATE transactions
         SET date = ?,
+            due_date = ?,
             type = ?,
             status = ?,
             description = ?,
@@ -193,6 +196,7 @@ class TransactionRepository {
         ''',
         variables: <Variable>[
           Variable(transactionRecord.date),
+          Variable(transactionRecord.dueDate),
           Variable(transactionRecord.type),
           Variable(transactionRecord.status),
           Variable(transactionRecord.description),
@@ -219,8 +223,14 @@ class TransactionRepository {
     });
 
     _invalidateCache(transactionRecord.date);
+    if (transactionRecord.dueDate != null) {
+      _invalidateCache(transactionRecord.dueDate!);
+    }
     if (existing != null) {
       _invalidateCache(existing.date);
+      if (existing.dueDate != null) {
+        _invalidateCache(existing.dueDate!);
+      }
     }
 
     if (_auditEventFactory != null && changedFields.isNotEmpty) {
@@ -374,6 +384,7 @@ class TransactionRepository {
       INSERT INTO transactions (
         transaction_id,
         date,
+        due_date,
         type,
         status,
         description,
@@ -384,7 +395,7 @@ class TransactionRepository {
         period_lock_state,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ''',
       variables: _transactionVariables(transaction),
     );
@@ -559,6 +570,7 @@ class TransactionRepository {
     return <Variable>[
       Variable(transaction.transactionId),
       Variable(transaction.date),
+      Variable(transaction.dueDate),
       Variable(transaction.type),
       Variable(transaction.status),
       Variable(transaction.description),

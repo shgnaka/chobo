@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ChoboSchema', () {
     test('declares the first schema version', () {
-      expect(ChoboSchema.schemaVersion, 10);
+      expect(ChoboSchema.schemaVersion, 11);
     });
 
     test('includes the core tables required by the backup payload', () {
@@ -80,6 +80,28 @@ void main() {
         statements,
         contains(
             "direction TEXT NOT NULL CHECK (direction IN ('increase', 'decrease'))"),
+      );
+    });
+
+    test('includes due_date column for transactions', () {
+      final statements = ChoboSchema.createStatements.join('\n');
+
+      expect(
+        statements,
+        contains('due_date TEXT'),
+      );
+    });
+
+    test('includes billing_day and payment_due_day columns for accounts', () {
+      final statements = ChoboSchema.createStatements.join('\n');
+
+      expect(
+        statements,
+        contains('billing_day INTEGER'),
+      );
+      expect(
+        statements,
+        contains('payment_due_day INTEGER'),
       );
     });
   });

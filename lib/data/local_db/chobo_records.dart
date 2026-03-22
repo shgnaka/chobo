@@ -11,6 +11,8 @@ class ChoboAccountRecord {
     this.parentAccountId,
     this.isDefault = false,
     this.isArchived = false,
+    this.billingDay,
+    this.paymentDueDay,
   });
 
   final String accountId;
@@ -20,6 +22,8 @@ class ChoboAccountRecord {
   final String? parentAccountId;
   final bool isDefault;
   final bool isArchived;
+  final int? billingDay;
+  final int? paymentDueDay;
   final String createdAt;
   final String updatedAt;
 
@@ -31,6 +35,8 @@ class ChoboAccountRecord {
     String? parentAccountId,
     bool? isDefault,
     bool? isArchived,
+    int? billingDay,
+    int? paymentDueDay,
     String? createdAt,
     String? updatedAt,
   }) {
@@ -42,6 +48,8 @@ class ChoboAccountRecord {
       parentAccountId: parentAccountId ?? this.parentAccountId,
       isDefault: isDefault ?? this.isDefault,
       isArchived: isArchived ?? this.isArchived,
+      billingDay: billingDay ?? this.billingDay,
+      paymentDueDay: paymentDueDay ?? this.paymentDueDay,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -56,6 +64,8 @@ class ChoboAccountRecord {
       'parent_account_id': parentAccountId,
       'is_default': isDefault ? 1 : 0,
       'is_archived': isArchived ? 1 : 0,
+      'billing_day': billingDay,
+      'payment_due_day': paymentDueDay,
       'created_at': createdAt,
       'updated_at': updatedAt,
     };
@@ -70,6 +80,8 @@ class ChoboAccountRecord {
       parentAccountId: row.readNullable<String>('parent_account_id'),
       isDefault: row.read<int>('is_default') == 1,
       isArchived: row.read<int>('is_archived') == 1,
+      billingDay: row.readNullable<int>('billing_day'),
+      paymentDueDay: row.readNullable<int>('payment_due_day'),
       createdAt: row.read<String>('created_at'),
       updatedAt: row.read<String>('updated_at'),
     );
@@ -91,10 +103,12 @@ class ChoboTransactionRecord {
     this.originalTransactionId,
     this.refundType,
     this.periodLockState = 'open',
+    this.dueDate,
   });
 
   final String transactionId;
   final String date;
+  final String? dueDate;
   final String type;
   final String status;
   final String? description;
@@ -121,6 +135,7 @@ class ChoboTransactionRecord {
     String? periodLockState,
     String? createdAt,
     String? updatedAt,
+    String? dueDate,
   }) {
     return ChoboTransactionRecord(
       transactionId: transactionId ?? this.transactionId,
@@ -137,6 +152,7 @@ class ChoboTransactionRecord {
       periodLockState: periodLockState ?? this.periodLockState,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      dueDate: dueDate ?? this.dueDate,
     );
   }
 
@@ -144,6 +160,7 @@ class ChoboTransactionRecord {
     return <String, Object?>{
       'transaction_id': transactionId,
       'date': date,
+      'due_date': dueDate,
       'type': type,
       'status': status,
       'description': description,
@@ -162,6 +179,7 @@ class ChoboTransactionRecord {
     return ChoboTransactionRecord(
       transactionId: row.read<String>('transaction_id'),
       date: row.read<String>('date'),
+      dueDate: row.readNullable<String>('due_date'),
       type: row.read<String>('type'),
       status: row.read<String>('status'),
       description: row.readNullable<String>('description'),
