@@ -1,7 +1,9 @@
 import 'package:chobo/app/chobo_providers.dart';
+import 'package:chobo/core/terminology_service.dart';
 import 'package:chobo/data/local_db/app_database.dart';
 import 'package:chobo/data/local_db/chobo_records.dart';
 import 'package:chobo/data/repository/account_repository.dart';
+import 'package:chobo/data/repository/settings_repository.dart';
 import 'package:chobo/data/repository/transaction_repository.dart';
 import 'package:chobo/features/transactions/transaction_detail_screen.dart';
 import 'package:drift/native.dart';
@@ -43,10 +45,15 @@ void main() {
       ],
     );
 
+    final settingsRepo = SettingsRepository(db);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
           appDatabaseProvider.overrideWithValue(db),
+          terminologyModeProvider.overrideWith(
+            (ref) => _TestTerminologyModeNotifier(settingsRepo),
+          ),
         ],
         child: const MaterialApp(
           home: TransactionDetailScreen(transactionId: 'txn_001'),
@@ -63,6 +70,23 @@ void main() {
     expect(find.text('戻る'), findsOneWidget);
     expect(find.text('編集'), findsOneWidget);
   });
+}
+
+class _TestTerminologyModeNotifier extends TerminologyModeNotifier {
+  _TestTerminologyModeNotifier(SettingsRepository settingsRepo)
+      : super(settingsRepo) {
+    state = 'advanced';
+  }
+
+  @override
+  Future<void> _loadSetting() async {
+    // No-op for testing - already set state in constructor
+  }
+
+  @override
+  Future<void> setMode(String mode) async {
+    state = mode;
+  }
 }
 
 AppDatabase _openDb() {

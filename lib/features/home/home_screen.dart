@@ -70,6 +70,9 @@ class _QuickActionsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final month = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -79,6 +82,14 @@ class _QuickActionsBar extends StatelessWidget {
               icon: Icons.stars,
               label: 'ポイント',
               onTap: () => context.push('/points'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _QuickActionButton(
+              icon: Icons.bar_chart,
+              label: '月次',
+              onTap: () => context.push('/summary/$month'),
             ),
           ),
           const SizedBox(width: 8),
