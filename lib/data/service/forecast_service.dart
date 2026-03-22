@@ -26,6 +26,12 @@ class ForecastService {
     final upcomingRecurring = await _getUpcomingRecurring(
       bounds.nextMonthStart,
     );
+    final billingCycles = await _getAccountBillingCycles();
+    final dueDateProjections = await _getDueDateProjections(
+      pendingPayments,
+      billingCycles,
+      bounds,
+    );
 
     final totalPendingExpenses = pendingPayments
         .where((p) => p.isExpense)
@@ -66,6 +72,8 @@ class ForecastService {
       pendingPayments: pendingPayments,
       upcomingRecurring: upcomingRecurring,
       dailyForecasts: dailyForecasts,
+      billingCycles: billingCycles,
+      dueDateProjections: dueDateProjections,
     );
   }
 
@@ -97,10 +105,12 @@ class ForecastService {
       '''
       SELECT t.transaction_id,
              t.date,
+             t.due_date,
              t.type,
              t.description,
              e.amount,
-             a.name AS account_name
+             a.name AS account_name,
+             a.account_id
       FROM transactions t
       JOIN entries e ON e.transaction_id = t.transaction_id
       JOIN accounts a ON a.account_id = e.account_id
@@ -125,8 +135,10 @@ class ForecastService {
       return PendingPaymentDto(
         transactionId: row.read<String>('transaction_id'),
         date: row.read<String>('date'),
+        dueDate: row.readNullable<String>('due_date'),
         description: desc ?? '',
         accountName: row.read<String>('account_name'),
+        accountId: row.read<String>('account_id'),
         amount: row.read<int>('amount'),
         isExpense: isExpense,
         isIncome: isIncome,
@@ -246,7 +258,9 @@ class ForecastService {
     final recurringByDate = <String, int>{};
 
     for (final p in pendingPayments) {
-      pendingByDate[p.date] = (pendingByDate[p.date] ?? 0) + p.amount;
+      final effectiveDate = p.effectiveDate;
+      pendingByDate[effectiveDate] =
+          (pendingByDate[effectiveDate] ?? 0) + p.amount;
     }
 
     for (final r in upcomingRecurring) {
@@ -283,6 +297,88 @@ class ForecastService {
   String _dateOnly(DateTime dateTime) {
     return dateTime.toIso8601String().substring(0, 10);
   }
+
+  Future<List<AccountBillingCycleDto>> _getAccountBillingCycles() async {
+    final rows = await _db.customSelect(
+      '''
+      SELECT account_id, name, billing_day, payment_due_day
+      FROM accounts
+      WHERE billing_day IS NOT NULL
+         OR payment_due_day IS NOT NULL
+      ORDER BY account_id
+      ''',
+    ).get();
+
+    return rows.map((row) {
+      return AccountBillingCycleDto(
+        accountId: row.read<String>('account_id'),
+        accountName: row.read<String>('name'),
+        billingDay: row.readNullable<int>('billing_day') ?? 0,
+        paymentDueDay: row.readNullable<int>('payment_due_day') ?? 0,
+      );
+    }).toList(growable: false);
+  }
+
+  Future<List<DueDateProjectionDto>> _getDueDateProjections(
+    List<PendingPaymentDto> pendingPayments,
+    List<AccountBillingCycleDto> billingCycles,
+    _MonthBounds bounds,
+  ) async {
+    final dueDateGroups = <String, List<PendingPaymentDto>>{};
+
+    for (final payment in pendingPayments) {
+      final effectiveDate = payment.effectiveDate;
+      if (effectiveDate.compareTo(bounds.nextMonthStart) >= 0) {
+        dueDateGroups.putIfAbsent(effectiveDate, () => []).add(payment);
+      }
+    }
+
+    final projections = <DueDateProjectionDto>[];
+    final sortedDates = dueDateGroups.keys.toList()..sort();
+
+    for (final date in sortedDates) {
+      final payments = dueDateGroups[date]!;
+      final expenses = payments.where((p) => p.isExpense).toList();
+
+      if (expenses.isNotEmpty) {
+        final accountBalances = <String, int>{};
+        final accountCounts = <String, int>{};
+
+        for (final payment in expenses) {
+          accountBalances[payment.accountId] =
+              (accountBalances[payment.accountId] ?? 0) + payment.amount;
+          accountCounts[payment.accountId] =
+              (accountCounts[payment.accountId] ?? 0) + 1;
+        }
+
+        for (final accountId in accountBalances.keys) {
+          final accountName =
+              expenses.firstWhere((p) => p.accountId == accountId).accountName;
+          final cycle =
+              billingCycles.where((c) => c.accountId == accountId).firstOrNull;
+          final isPaymentDue = cycle != null && cycle.paymentDueDay > 0
+              ? _isPaymentDueDate(date, cycle.paymentDueDay)
+              : false;
+
+          projections.add(DueDateProjectionDto(
+            accountId: accountId,
+            accountName: accountName,
+            dueDate: date,
+            totalDue: accountBalances[accountId]!,
+            paymentCount: accountCounts[accountId]!,
+            isPaymentDue: isPaymentDue,
+          ));
+        }
+      }
+    }
+
+    return projections;
+  }
+
+  bool _isPaymentDueDate(String dueDate, int paymentDueDay) {
+    final date = DateTime.parse(dueDate);
+    return date.day <= paymentDueDay;
+  }
 }
 
 class EndOfMonthForecastDto {
@@ -299,6 +395,8 @@ class EndOfMonthForecastDto {
     required this.pendingPayments,
     required this.upcomingRecurring,
     required this.dailyForecasts,
+    required this.billingCycles,
+    required this.dueDateProjections,
   });
 
   final String month;
@@ -313,6 +411,8 @@ class EndOfMonthForecastDto {
   final List<PendingPaymentDto> pendingPayments;
   final List<RecurringPaymentDto> upcomingRecurring;
   final List<DailyForecastDto> dailyForecasts;
+  final List<AccountBillingCycleDto> billingCycles;
+  final List<DueDateProjectionDto> dueDateProjections;
 }
 
 class PendingPaymentDto {
@@ -321,18 +421,24 @@ class PendingPaymentDto {
     required this.date,
     required this.description,
     required this.accountName,
+    required this.accountId,
     required this.amount,
     required this.isExpense,
     required this.isIncome,
+    this.dueDate,
   });
 
   final String transactionId;
   final String date;
+  final String? dueDate;
   final String description;
   final String accountName;
+  final String accountId;
   final int amount;
   final bool isExpense;
   final bool isIncome;
+
+  String get effectiveDate => dueDate ?? date;
 }
 
 class RecurringPaymentDto {
@@ -367,6 +473,38 @@ class DailyForecastDto {
   final int predictedBalance;
   final int pendingAmount;
   final int recurringAmount;
+}
+
+class AccountBillingCycleDto {
+  const AccountBillingCycleDto({
+    required this.accountId,
+    required this.accountName,
+    required this.billingDay,
+    required this.paymentDueDay,
+  });
+
+  final String accountId;
+  final String accountName;
+  final int billingDay;
+  final int paymentDueDay;
+}
+
+class DueDateProjectionDto {
+  const DueDateProjectionDto({
+    required this.accountId,
+    required this.accountName,
+    required this.dueDate,
+    required this.totalDue,
+    required this.paymentCount,
+    required this.isPaymentDue,
+  });
+
+  final String accountId;
+  final String accountName;
+  final String dueDate;
+  final int totalDue;
+  final int paymentCount;
+  final bool isPaymentDue;
 }
 
 class _EntryTemplateItem {
